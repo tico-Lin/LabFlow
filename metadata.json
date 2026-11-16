@@ -1,0 +1,6 @@
+{
+  "name": "LabFlow Scientific OS",
+  "description": "Unified laboratory data processing, electrochemistry, synchrotron XAS/XRD/XPS/NMR, microscopy, ELN/LIMS, and autonomous scientific analysis workbench.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
