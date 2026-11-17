@@ -1,0 +1,267 @@
+SOFH
+Platform: PC
+Technique: XPS
+FileType:  SPECTRUM
+FileDesc: MnO-NF
+SoftwareVersion: SS 2.9.0.1
+InstrumentModel: PHI VersaProbe II
+AcqFilename: D:\Datafiles\ESCA data\2026-09\20260908\20260908.111.4.spe
+FileDate: 2026 9 8
+AcqFileDate: 2026 9 8
+Institution: PHI
+Operator: 
+ExperimentID: 20260908
+EnergyReference: none 0.0
+AnalyserWorkFcn: 4.248 eV
+AnalyserRetardGain: 1.000436
+PlatenID: 20260908
+PhotoFilename: Default_25mm.bmp
+SXIFilename: 
+SourceAnalyserAngle: 45.0 d
+AnalyserSolidAngle: 0.38 sr
+IntensityRecal: no
+IntensityCalCoeff: 113.655 0.272
+EnergyRecal: no
+ScanDeflectionSpan: 46 23
+ScanDeflectionOffset: 0 0
+SCAMultiplierVoltage: 2000.0 V 
+NarrowAcceptanceAngle: no
+PeakToNoiseRatioState: no
+DelayBeforeAcquire: 5 seconds
+C60IonGun: 20kV C60 Ion Gun
+BiasBoxMode: 0
+TFCParameters: 0, 1, 2, 93.73, 7.481, 1, 1
+SemFieldOfView: 0.0000000
+ImageSizeXY: 0.0000 0.0000
+IonGunMode: Neutralize
+SputterIon: Ar+
+SputterCurrent: 0.000 uA
+SputterRate: 0.000 A/min
+SputterEnergy: 0.110 kV
+FloatVolt: -100.0 V
+FloatEnable: yes
+GridVolt: 160.0
+CondensorVolt: 66.44 
+ObjectiveVolt: 99.00 
+BendVolt: 1.32
+SputterRaster: 0.00 0.00 mm
+SputterRasterOffset: 3.600 -0.800 mm
+TargetSputterTime: 0.1 min
+SputterEmission: 7.00 mA
+DeflectionBias: 70.0 V
+XpsScanMode: scanned
+AnalyserMode: FAT
+SurvNumCycles: 1
+SurvTimePerStep: 20.000000
+NoSpectralRegFull: 10
+SpectralRegDefFull: 1 0 Su1s 111 1351 -1.0000 1350.0000 0.0000 1349.0000 1.0000 0.000000 117.40 AREA
+SpectralRegDef2Full: 1 1350.0 1 0 1 1
+SpectralRegBackgroundFull: 1 0.0 675.0 0.0
+SpectralRegHeroFull: 1 675.0 0.0 0.0 0.00
+SpectralRegIRFull: 1 0 0.000 0.000 0.0
+SpectralRegDefFull: 2 1 O1s 8 181 -0.1000 542.0000 524.0000 541.0000 525.0000 0.000000 23.50 AREA
+SpectralRegDef2Full: 2 18.0 8 0 6 1
+SpectralRegBackgroundFull: 2 0.0 533.0 0.0
+SpectralRegHeroFull: 2 533.0 0.0 0.0 0.00
+SpectralRegIRFull: 2 0 0.000 0.000 0.0
+SpectralRegDefFull: 3 1 Cu2p3 29 451 -0.1000 970.0000 925.0000 969.0000 926.0000 0.000000 23.50 AREA
+SpectralRegDef2Full: 3 45.0 5 0 6 1
+SpectralRegBackgroundFull: 3 0.0 947.5 0.0
+SpectralRegHeroFull: 3 947.5 0.0 0.0 0.00
+SpectralRegIRFull: 3 0 0.000 0.000 0.0
+SpectralRegDefFull: 4 1 Mo3d 42 201 -0.1000 245.0000 225.0000 244.0000 226.0000 0.000000 23.50 AREA
+SpectralRegDef2Full: 4 20.0 5 0 6 1
+SpectralRegBackgroundFull: 4 0.0 235.0 0.0
+SpectralRegHeroFull: 4 235.0 0.0 0.0 0.00
+SpectralRegIRFull: 4 0 0.000 0.000 0.0
+SpectralRegDefFull: 5 1 Ni2p3 28 411 -0.1000 890.0000 849.0000 889.0000 850.0000 0.000000 23.50 AREA
+SpectralRegDef2Full: 5 41.0 15 0 6 1
+SpectralRegBackgroundFull: 5 0.0 869.5 0.0
+SpectralRegHeroFull: 5 869.5 0.0 0.0 0.00
+SpectralRegIRFull: 5 0 0.000 0.000 0.0
+SpectralRegDefFull: 6 1 Fe2p3 26 351 -0.1000 740.0000 705.0000 739.0000 706.0000 0.000000 23.50 AREA
+SpectralRegDef2Full: 6 35.0 5 0 6 1
+SpectralRegBackgroundFull: 6 0.0 722.5 0.0
+SpectralRegHeroFull: 6 722.5 0.0 0.0 0.00
+SpectralRegIRFull: 6 0 0.000 0.000 0.0
+SpectralRegDefFull: 7 1 Mn2p3 25 261 -0.1000 660.0000 634.0000 659.0000 635.0000 0.000000 23.50 AREA
+SpectralRegDef2Full: 7 26.0 15 0 6 1
+SpectralRegBackgroundFull: 7 0.0 647.0 0.0
+SpectralRegHeroFull: 7 647.0 0.0 0.0 0.00
+SpectralRegIRFull: 7 0 0.000 0.000 0.0
+SpectralRegDefFull: 8 1 Co2p3 27 451 -0.1000 815.0000 770.0000 814.0000 771.0000 0.000000 23.50 AREA
+SpectralRegDef2Full: 8 45.0 5 0 6 1
+SpectralRegBackgroundFull: 8 0.0 792.5 0.0
+SpectralRegHeroFull: 8 792.5 0.0 0.0 0.00
+SpectralRegIRFull: 8 0 0.000 0.000 0.0
+SpectralRegDefFull: 9 1 Zn2p3 30 401 -0.1000 1055.0000 1015.0000 1054.0000 1016.0000 0.000000 23.50 AREA
+SpectralRegDef2Full: 9 40.0 5 0 6 1
+SpectralRegBackgroundFull: 9 0.0 1035.0 0.0
+SpectralRegHeroFull: 9 1035.0 0.0 0.0 0.00
+SpectralRegIRFull: 9 0 0.000 0.000 0.0
+SpectralRegDefFull: 10 1 C1s 6 171 -0.1000 295.0000 278.0000 294.0000 279.0000 0.000000 23.50 AREA
+SpectralRegDef2Full: 10 17.0 8 0 6 1
+SpectralRegBackgroundFull: 10 0.0 286.5 0.0
+SpectralRegHeroFull: 10 286.5 0.0 0.0 0.00
+SpectralRegIRFull: 10 0 0.000 0.000 0.0
+NoSpectralReg: 9
+SpectralRegDef: 1 1 O1s 8 181 -0.1000 542.0000 524.0000 541.0000 525.0000 0.960000 23.50 AREA
+SpectralRegDef2: 1 18.0 8 0 6 1
+SpectralRegBackground: 1 0.0 533.0 0.0
+SpectralRegHero: 1 533.0 0.0 0.0 0.00
+SpectralRegIR: 1 1 0.000 0.000 0.0
+SpectralRegDef: 2 1 Cu2p3 29 451 -0.1000 970.0000 925.0000 969.0000 926.0000 0.600000 23.50 AREA
+SpectralRegDef2: 2 45.0 5 0 6 1
+SpectralRegBackground: 2 0.0 947.5 0.0
+SpectralRegHero: 2 947.5 0.0 0.0 0.00
+SpectralRegIR: 2 1 0.000 0.000 0.0
+SpectralRegDef: 3 1 Mo3d 42 201 -0.1000 245.0000 225.0000 244.0000 226.0000 0.600000 23.50 AREA
+SpectralRegDef2: 3 20.0 5 0 6 1
+SpectralRegBackground: 3 0.0 235.0 0.0
+SpectralRegHero: 3 235.0 0.0 0.0 0.00
+SpectralRegIR: 3 1 0.000 0.000 0.0
+SpectralRegDef: 4 1 Ni2p3 28 411 -0.1000 890.0000 849.0000 889.0000 850.0000 1.800000 23.50 AREA
+SpectralRegDef2: 4 41.0 15 0 6 1
+SpectralRegBackground: 4 0.0 869.5 0.0
+SpectralRegHero: 4 869.5 0.0 0.0 0.00
+SpectralRegIR: 4 1 0.000 0.000 0.0
+SpectralRegDef: 5 1 Fe2p3 26 351 -0.1000 740.0000 705.0000 739.0000 706.0000 0.600000 23.50 AREA
+SpectralRegDef2: 5 35.0 5 0 6 1
+SpectralRegBackground: 5 0.0 722.5 0.0
+SpectralRegHero: 5 722.5 0.0 0.0 0.00
+SpectralRegIR: 5 1 0.000 0.000 0.0
+SpectralRegDef: 6 1 Mn2p3 25 261 -0.1000 660.0000 634.0000 659.0000 635.0000 1.800000 23.50 AREA
+SpectralRegDef2: 6 26.0 15 0 6 1
+SpectralRegBackground: 6 0.0 647.0 0.0
+SpectralRegHero: 6 647.0 0.0 0.0 0.00
+SpectralRegIR: 6 1 0.000 0.000 0.0
+SpectralRegDef: 7 1 Co2p3 27 451 -0.1000 815.0000 770.0000 814.0000 771.0000 0.600000 23.50 AREA
+SpectralRegDef2: 7 45.0 5 0 6 1
+SpectralRegBackground: 7 0.0 792.5 0.0
+SpectralRegHero: 7 792.5 0.0 0.0 0.00
+SpectralRegIR: 7 1 0.000 0.000 0.0
+SpectralRegDef: 8 1 Zn2p3 30 401 -0.1000 1055.0000 1015.0000 1054.0000 1016.0000 0.600000 23.50 AREA
+SpectralRegDef2: 8 40.0 5 0 6 1
+SpectralRegBackground: 8 0.0 1035.0 0.0
+SpectralRegHero: 8 1035.0 0.0 0.0 0.00
+SpectralRegIR: 8 1 0.000 0.000 0.0
+SpectralRegDef: 9 1 C1s 6 171 -0.1000 295.0000 278.0000 294.0000 279.0000 0.960000 23.50 AREA
+SpectralRegDef2: 9 17.0 8 0 6 1
+SpectralRegBackground: 9 0.0 286.5 0.0
+SpectralRegHero: 9 286.5 0.0 0.0 0.00
+SpectralRegIR: 9 1 0.000 0.000 0.0
+NoSpatialArea: 1
+SpatialAreaDef: 1 4 1 (4277.7 6756.2 17652.0 45.0 -0.1)
+SpatialAreaDesc: 1 MnO-NF
+SpatialHRPhotoCor: 1 (0.0 0.0)
+XraySource: Al 1486.6 mono
+XrayAnodePosition: 10
+XrayPower: 25.02 W
+XrayBeamDiameter: 100.0 um
+XRayBeamVoltage: 15000.0 V
+XRayCondenserLensVoltage: 8260.0 V
+XRayObjectiveCoilCurrent: 0.711 A
+XRayBlankingVoltage: 260.0 V
+XRayFilamentCurrent: 1.459 A
+XRayStigmator: 0.0 0.0
+XRayOffsetInUm: -165 10
+XRayMagFactor: 0.351 0.352
+XRayDelayFactor: 2000 1000
+XRayRotationInDeg: -21.50 V
+XRayHighPower: no
+XRayEmissionControl: yes
+XRayEmissionCurrent: 3.000 mA
+XRayStepDelayReadBeam: 5
+XRayStepsPerDiameter: 1.0
+XRayInterlaceInterval: 1
+XRayMaxFilamentCurrent: 1.550 A
+XRaySetting: 100u25W15KV
+EgunNeutMode: Neutralize
+NeutralizerCurrent: 20.0 uA
+NeutralizerEnergy: 1.00 V
+EgunNeutExtractor: 45.0 V
+EgunNeutXSteering: 6.0 
+EgunNeutYSteering: -15.0 
+EgunNeutFilament: 0.90 A
+EgunNeutPulseLength: 10.0 msec
+EgunNeutPulseFrequency: 30
+SxiPersistence: 3
+SxiSecPerDisplay: 3.0 
+SxiAutoContrast: yes
+SxiAutoContrastLow: 0.30 
+SxiAutoContrastHigh: 0.30 
+SxiBindingEnergy: 430.0 eV
+SxiPassEnergy: 376 eV
+SxiLens2: -789 V
+SxiLens3: -747 V
+SxiLensBias: 0 V
+SxiShutterBias: yes
+SxiShutterBiasVoltage: 250.0 V
+SxiDisplayMode: 0
+Detector Acq Time: 10.0 (min)
+Number Of Channels: 16
+Channel Info: 1 1 1.412
+Channel Info: 2 1 1.301
+Channel Info: 3 1 1.102
+Channel Info: 4 1 1.148
+Channel Info: 5 1 1.145
+Channel Info: 6 1 1.019
+Channel Info: 7 1 0.978
+Channel Info: 8 1 1.057
+Channel Info: 9 1 1.076
+Channel Info: 10 1 1.132
+Channel Info: 11 1 0.915
+Channel Info: 12 1 0.827
+Channel Info: 13 1 0.744
+Channel Info: 14 1 0.700
+Channel Info: 15 1 0.710
+Channel Info: 16 1 1.604
+StagePosition: 4.2709 -6.7609 17.6460 45.0125 -0.1000
+StageCurrentRotationSpeed: 1.0000
+DefectPosID: 4
+DefectPosComment: MnO-NF
+DefectPosU: 4.2827
+DefectPosV: -6.7535
+DefectPosX: 4.2709
+DefectPosY: -6.7609
+DefectPosZ: 17.6460
+DefectPosTilt: 45.0125
+DefectPosRotation: -0.1000
+DefectPosAligment: None
+DefectPosReferenceImage: Default_25mm.bmp
+C60IonGunMode: Off
+C60IonCurrent: 0.0 uA
+C60SputterRate: 0.0 A/min
+C60Beam: 0.000 kV
+C60Temperature: 0.0 C
+C60Repellor: 0.0 V
+C60Grid: 0.0 V
+C60Lens2: 0.000 kV
+C60Extractor: 0.0 kV
+C60Deflector: 0.0 0.0 V
+C60BlankingDeflector: no yes
+C60Raster: 0.0 0.0 mm
+C60RasterOffset: 0.0 0.0 mm
+C60Emission: 0.00 mA
+C60Filament: 0.00 A
+C60Blanking: 0.000 V
+Deconvolution: no
+DeconvolutionPassEnergy: 2.95 eV
+Presputter: no
+EOFH
+   	   `                    µ         pnt     sar             c/s 	           f4  ‘  p                             √        pnt     sar             c/s 	           f4    D                             …         pnt     sar             c/s 	           f4  $  P                             õ        pnt     sar             c/s 	           f4  l  t                             _        pnt     sar             c/s 	           f4  |  ‡                                     pnt     sar             c/s 	           f4    \                             √        pnt     sar             c/s 	           f4    p                              ë        pnt     sar             c/s 	           f4  D  |'              	         	      ´         pnt     sar             c/s 	           f4  ¨  ¿-              ´˛±D Ñ≤D §µD ê∞D´ﬁÆDVi£DVÌ¶D´.™D´:®D à©D º±D úÆD H£D´ ©D <•D ¿®D´~•D´f©D´F¶DV©©D ê∞D |´DVYÆD à©D´VõD <•D †D´Ü¨D ‰¢DVu°D òûDV·®D´JùD´~•DV≈úD T°DVyòD´vûDV—öDVÅüD´bôDVüD´öòD ÙóDVeìDVaúD´*öD´˛òD ùD `üD´
+óD ƒüD´˙°D´†DVçùD´>üD T°DVüD´˙°D´:®DVµßD ¨£DVÈØD dØD´n∞DVπ∑DV=ªD´:¡DV—D´6 D ÿ÷D LÂD 4ÈD òÈD ú˘DVs E´ê	E´`EVÖE´îE #E à)EV9E éAE´ZDE´BHE´ÙTE P\EV«VE &cEVfEVsdEVagEV›cEVulEVÎiE´ËoE npEVÀfE àtE <pE 0rEVwE ê{E´oÇE´é~EVhÜE sáE ÄâEVˇäE´ıçE´€âE´åE ÄâEVdèEVõäE çE´˜ïE ¬óEVà¢EV™EV÷ÆEVg¥EV‰¥E´´™E ö¶E rúE üàE´ÄxE 6XE ¬0EVEVÅEVôÊD `—D §µDVŸ°D´BñDVÅÜD´*ÅDVAÄD´2lD xfD kD´ÇND »HD HUD´
+ID êID PCD `QD´zGD Ä;D´R=D –6DVΩ.D´
+0D ê0DV54D ®,DV54DVM0D –6D´¢8DV›1D´¢8D´2:DV}(D´*3D´7D´¢8D Ë2DVU7D´ä<D´Ú3D´Í,D´“0D´j9D ∞3D´Ç5D´ö1D¨⁄E◊E◊E¨bﬂE¨B◊E†◊E “Eh›E¨÷EÄﬁEVΩÃEÄŸE´2”Ex◊E´ÚÃEVuÿE´z—E´≤–EV≠ÕE¨b’EVMŒE´*ÃE´ ÃEVÕ–EV’ÕE´—E´—E´Ú—Ex“E´B“E´zÃE¨R÷EVÖ“Eà—EV= Eh”EV]“EV•–E´2ŒEV5“E´R—EVΩ—E´ÚÃE´j“ExÕEË–E´z«E8ÃE´“ŒEVM…E(ÕEàÃE´≤–E´:∆E´ÕEÄœE´ «E´íÕE∏…E‡…EVÖ»EVe E´" E»EHÀEà«E´:∆EV= EVu…EVΩÃEV5»EVe≈EVMƒE´z«E´≤ÀE∞«EpÀE«EœEX≈EX≈EVÖÕE¯ E ∆E«E´äÀE´íÕEVÌƒE´≤∆EV≈E`ÃE‡…E´»EV˝√E´Ú«EV%…EX E´:ÀE´Ú«E´Ç…EV]»Ex√E‡ƒE´⁄ÀE¿ÀEVÌ…E†»EV%…EV E®≈E´RÃEV]»EX≈E@…E´∫»E»»E(»E »E´ÃE´
+…E´ÇŒE´"œEV5»E´í»EP»E´bÀEVuƒEV»E´ä∆EVu…E ÀEp∆E´J EV%ƒEV› E@ƒE´í√E´≤ÀE ÀEÿ«EVE«E(»EV-∆E´˙…EVMŒEV%…EVΩ—E´Ú«EVÕ∆EVU∆EV˝»E´ÃE´äÀEV•∆E8ÃE´r E´äÀE´≤ÀE¿ÀEV]ÕEà«E´˙…EVù…Eÿ«EVùŒE´™ŒE´»EV≈ŒE¯œE´" E´ö ExÕE´ÃE´“…Eò–EVÌƒE® E´™…EVÂÃE†»E¯≈E0≈Eò–EV-∆EVÀEV•∆E´“…E´J≈E´¢«EV›¿E´*«EV≈E´" EV≈ƒE´ö≈EVÖ√EVÕEX≈E´z«E´J≈EVM…EVù…EV’»E ∆EVe≈E´Í≈E´⁄ÀEVUÀEVM…E´≤∆Eà«EË∆E´*ÃE´ä∆E¿ÀEVÂ«E´"≈E–≈Ex»Eh…E´ö EV-ÀE0 E∏…EVïÃEV≈…EVïÃEV›≈E´rœEŒEVÌ…E´⁄∆E¿∆EV•∆E´ÃEÿ«EV%…E´¢«EVÂÃE´í»EVu…E@ƒE E´zÃEP»E´‚√EHÀE»EP»EË¡EVÂ«E´˙ƒEV√EV5√Ex√E†√E´B√E´¢ΩEVï¬E´ÇøEV’√EVçªE¯ªE´“øEê∫E‡∫E´zΩEV¬E0ªE´:ºEV≠æEVùøEVÖæE†√EV≈∫E´™∫EVUºEæEV=ªEVeªE´íæE®ªEV˝πE¿E´2øEVuøE´¬ªE´ÚΩEV’¥E ∑E†πEV}¡EV5æE∞ΩEÿ∏EVïΩEXªEV≠æE´∑E´∑E´"ªEV=∂E´:ºE´Ç∫EV’πEVï∏EÄ∂EX¿EVıºE´ ∏EàΩE¯∂E´™∫EV≠æEVªEæE´jæE0ªE´“µEVΩE´Z∫Eê∫E∫EVùµEV≈µE¯∂E´ö∂EË∑E∏∫EVıºE¿ºE´Z∫EV›∂EøE´Z∫E´⁄∑E†πEV’πEVç∂EVÂ≥EV’¥E´b∑EV=ªE´Í∂E´bºE´“øE´˙∫E´ö∂EVù∫E†æEà∏E´ÍªE´íπEXªE´z∏Ep∑E´≤ºEòºEV]πE´
+∫EV•ºEV]πE´rªEV≠¥EV]πEV˝πE´“∫E∫E´ZµEV}ºEVıºE´˙øEV}ºE´"∂E»æE´BπE´*ΩE∂E´ö¿E´Ú∏EVù∫E(πE´JªEà∏EVuµEV5æE´z∏EV}∑E@øE´"ªE´≤∑E´“µE´*ΩE´ÚΩE¿ºE´≤∑EÄ¿EVEΩE´z∏EVı∑E æEµEVE∏EPπE`∏EX∂EVΩEVΩ∏EH∑EVÕºEV%∫EVÖπEV=ªE´≤∑EV5æEV%øE´“∫EV›∂E`≥E´∫πEV∏EVuµE(πE´äºEê∫E´˙∫E∏E´*ΩE´*∏EVÖπEVï∏E´™∫EVπE¥EVï∏EVM∫EVπEVΩ≥EV=∂E´R∏E´¢∏EV≠πE†æE∫EË∑E´"∂EV5æE´ÇµE´bºEVÌµE´⁄ºE@&DV’ D´j4D@+D /D´ÍD´Í6DVï$DV’%D %D´™!D´*DV1D´™!DÄD´*)DV’/DV’ DV'D D  D´ÍDVï$D´™!DV"D´ÍD´™!D´™0DV’DVU7D´™D /DV’D´™+DÄ"D´™5DVï$D´™5D´Í"D´Í'D@!DVï)D´jD@&D´j DVU#D¿DÄ6D@D´™!D´Í"DV6DÄDVï$D´*$DV'D´j/DVUDVU(DÄ1D@DÄDV'D  D´*D´j*D D´j%D´™!DVï)DVU(D´j%D´™D´j DVUD´™D  DÄ'D D´j D´Í"D´™&D´Í'D´Í1D´jD %DV’ DV'D´j DVU-D¿#DV’4D´*)DV,D´j%DVU#DV’/DVU2D´Í"D¿(D *DÄ,DÄD´*)D´*)DV’%D D´Í'D´™&DÄ6D´j*D´™&DV’*D´Í"D´ÍD¿(D´Í'D¿(DVïD´Í'D´*$D´Í"D *DVU7D´*)D´j*DVUDÄ"D¿D¿2D¿(D´j/D´j%D´™!D@DV’*D  D´Í"D %DÄ'D´j DVïDV’*D´™&D´j*DVD@&DV’%DÄ"DVïD@!DV’ DVU(D´*D´™!DVD %D@&D¿D *D´jDÄ'DV'DV’DÄ"DVï3DV,D@+D´j%D@0DÄ'D´™+D  DVï3D 4D´Í1D´ÍD´*)D@+DÄ'DÄ1D 4DVU#D´j9DV,D´*$D´™!D´™&D 4DVD´*$D´™&DV’ DV"D /DV’%D´*)D´*)D¿(DVï$D@!DØ∞EVç±E≥E´“∞E´¬±EV•≤EVM∞E9÷≤E9¥E≥ErT¥EV]¥E9û≥E9&≥EV}≤E´≥E  ØE9¶∞E‰`±E˜≥E«ŸØE´"±E´“∞Er±EV≠ØE‰P≤E‰ê≥E PØEVÕ≤EV≤E9&≥E9û≥E‰Ä¥E´Í±Er‘±E«Ÿ¥EV-≤EVÕ≤Ew±E´z≥Er,¥EVE≥E‰¯ØE«a¥E´≤≤ErL≤E ¯±E∑∑E9N≥EV’¥E ∏∞E´j¥EVm≥E 0∂EVÂ∏Erå∏E p∑E ‡∫EoπEØ∫EV›ªEVeªEèsæErÙæEΩEèc∫E9∫E´∫æEóæE9FªE˜ΩEè[ΩE9.øEœΩErL¡ErløErú¡E«Å¡E‰h¬E'¿E´∆Er¥¬E´¢«E«â√EV=≈E«	∆E´b∆E √E´"≈E‰ê«ErÑ≈E« E9æ≈E«Å∆EV]√Erd«E´b∆E‰»E´≤∆EVe≈EW«E9VƒErå«E ®≈E‰–√E ‡ƒE‰Ä»Eè∆E P√E ≈E‰–√ErlƒE‰»∆EV}¡Ew¿EøEr¬E‰»¡E Ä¿E´R¬Eè´¬ErløE9æ¿E9¡E«i¿E◊øE«qΩE7øErƒ¡EVmΩEØƒE9¡E‰8≈E‰`¿E«A≈EèS¿E9∆«E´:¡EV]»ErlƒE9ﬁ»E´≤¡E´í»EV}∆E‰@«EVÂ«E«!ÃEr‹«E9ÆÀEè∆E9ÆÀE´J E‰†ÀEr…E´‚»E ∞«E‰0»E«q«EVù…E´b∆E´∆E9û«E‰ …E«i≈E∑∆E«yƒEVm¬E9f√E‰x¡E‰–√EáøEV%øErDøEèÎæE«©ºE´“∫E9FªE´"ªE‰`∂EVe∂E‰P∑E´z≥EÔ±E96≤E9fØErdÆE ò®E«ë¨EVu´E´b®Eè®E‰∏©EVï©EVm©E‰H¶E9&§EVï§EVÂ§E‰P®EW§Eè”§E »•Erd§E ÿ§EV•E9f•E96®ErD¶Eœ©Eè+ßE«ßE´“¶E  ™E«ißE‰ê©E«)´E´í™E?®E‰h©E´©Eè£ßE ¯ßE´
+´E9æßE9n¨E9™EœÆE‰H´Eè3ÆE‰`¨E‰±E àÆEO±E‰`±Eﬂ≠EèKØE«∞EV±Eó¥ErîµE«∂Eg≤ErÏ∑E‰»∑Eè√¥E9VµE‰ ∑E9Ó∏EOªE«∫E´J∂E ËºE‰∞ªE9n¿E‰¯æE´™øE‰(¡E´Í¿E?ºE«QƒEÔ¿E´ZƒEVuøEèÀ≈ErL∆E«	∆E @ƒEè´«E´*«EèÛ EèK»Er»EVù…E◊…E´⁄∆ErD…Er\ E´ZƒEèÎ»E 8«E9é»E9Ü∆EV≠»EV«E x»E∆Er«Eèª∆E – Er¥¬E ¿∆Eg∆E9»E‰√EèÎ√E‰»¡Eè≥øE (√EáƒEr¨≈E´“øE 0≈E'¿E«I¬Eè´¬E à¬E´Í≈E«Å∆E9ñ E h…E´≤ÀE´2ŒEVıÀEèSœE´“EV≈”E‰»’E‰ÿŸE´˙›E«°›E9ˆ›Eè‚E‰»‰E»â·EèK·EØ‚E‰hÂE‰ÊE»…ÁEV≈ÁE»·ËEV%ÏE»±ÊEÂE9∂ÊE»!ÂEÊEg‰EØ‚E´™‚E´rﬁEè3‡E‹Eèã›E9N€E‰ËÿEÿE9Œ”E9F‘EèÛœEVï—Eè€ŒE‰–»Eèì∆EW¬E9∂æEVïΩEèÉ∏E ò≤E?≤EV}≠E´
+´Ert®E´Ç°E◊°E‰ùE«ÒúEé€úE @úEoõE‰ ôE9õEÁõE‰õE‰òóEéòE´äôE«âñE ∞ïEVñE«πìE9ÆîEVµìE«ôïE«¡ïE9VóE«ôïE◊óEéÉïEéCîE9∆ïE‰¯ñErïE«ñE«˘îEé√ñE9ÜîEV]ñEVïE‰®ñErLîEéKñEéïEñE´îE `ïEVıîE‰xîE9æìErdïE‰ îE¨™vEVÅEV%qEV5E0rE¨jzEêvEVewEVısEV≈vE¨ yEVEyEÄ|EVewEVxEVU}E~E–rE¨∫uE¨ ~EyE†zE¨™gE‡{E¨˙vEVewE¨ä}E–|E¨˙{E¨äsE¨:}E¨*oE¨™vE sE–wE¨:}E`yEVewEVı}E¨uE@qEV’pEVUsE zEVwEV-ÄE¨˙qEVU}E¨
+vE¨juE†E´‚ÇE¨ÍwEVu{E¨⁄xEVıxEV%vE }E¨uE¨J|E }EVÂ~E¿xE¨zyEV≈qE–wEVe|E¨
+vE@{E¿sE´ÇE¨ yEÅE¨örE¨∫uEPpE¨ÍwE¨ yE zE¨ö|EV}E†ÇE¨*yEV’E¨⁄}EE~E´⁄ÄEVÅE´:ÄE∞yEV5EVÂÅE´ÅEËÄEòÄE¨:}E E–|E¨:}E¨J|E´äÄE¨jzEVUÄE‡{E´
+ÉE~EêÉEV5E }EV’E»ÇE¨ yE–|E¨äsEV}EV’pE¨ tEV≈{E†EVU}E@{E¨∫E¨EVıxE‡ÉEVµ|EVı}EPÇE´jÇEVUÄEËÄEVÅEVµ|E¨z~EV}ÄE´:ÄEPuE¨⁄}EVÄEÄ|EV≈{EV}ÖEÿÅE ÖEVÂ~Eê{EV-ÄEV-ÄE ÄE ÇEV]ÇE(ÇE¨∫E´:ÄE´“ÉEPEVÅEV}E´ÇÉE´
+ÉEV5E´íÇE´¬ÑEV’E´BÇEhÉE´ÇE´*ÅE†E8ÅEVΩÅEÑE‡ÉEVUÄEV•}EV=ÑEV5ÇEV≠ÇE´‚ÇEVÖE´™ÉE´ÜE´‚ÇE´zÜE´™ÉEÑE´⁄ÖEVïÜEV=ÑE(áEVÌÉEÄÑEVÖáE´RÜE´râEÇE¯ÑE´˙ÉE–ÑE´“àEâEVUÖEhàE´íÇE∏ÉEâE0âE ÇEVÖáEV•ÖE´JâE´*ÅE¿ÖEV}äEêàEVµÑEV•äEV}äE0âE´*ÜEVãE∞ãEV-äE∞ÜE´JâEVäE´RÜEVïÜEV≈àEVuçEV-äEV’áE´ãEVÜE´
+àEVÂÜE´™çEVΩÜE®éE8ãE¯âE äEÄâEVΩÜEòäE´ÇàE»åE(áE‡àE»áE–âExåEV=âEÄâE¿èE´ZàExáE´RÜE@çEV=âE´*ãE´ ÜE´jáEV5áEVÕÖE´jáE8ãEçEV•äEPáEVçÑE´RãE–ÑE†áEVäE´˙àEPåE´ZçE´“àE áEVuçEËäE´bäEVΩÜE´bÖE´"âEhàEâEV=âE–âEVUäE´¢ãEpÖEVÂÜEV}äE´BÇE†áE´¢ÅE´:ÖEV%ÉE´¢ÜE´zÜE´ääE´JÑE¯âE´:ÖEÜEÉE‡àExáEÜEVuÉE´≤äE´:ÄE áEÿÜEòÖEVÇE¨:}EPE´jÇEVùÉE´
+ÉE´*ÅEV-ÖEV-ÖEV%àE´ÚÅE´⁄ÖEêÉE–ÑE¨⁄xEV˝ÇE–ÑE¨E´≤ÄE´ÅEV’EVÄEV|E´zÅEêvE¨ztEHÄEVµrEÄ|EVÅEpxE∞~EVµwE9û[E‰H]E9^ZE‰ò]E9Ó[E PaEgZE‰8^E9ﬁ\Er]EVu]Er¨^Er¨^E«Å_Eá]E9dEr,\E PaEV•_Er<`Er¨cE9_EècEr\hE fE9hE9~bE –hEè„nEr¨mEråoE´*jEVÂjEgnE9ûoE»QqE9˛xE‰(xEVµwEw|Eèì}Eè#E«IÅE∑ÄE9~ÉE9ŒÉEéªÖE9FâE«·âE«qãEVÌçEVuçEé≥íE‰ËíE«íE àïEr4òE«iòEVïïE´:ôE‰∞òE´ròE96ôE´™óE´ïE9FìE´îE«—èEèE ËäE´ÚãEr¨ÑE9ÜÖE hÉE9ÜÄEr‹~Eè√E9|Eè3tE‰XpEè”jE9ûjEáqE9ÓjEråeE´*jEè#fE9ûeE9æhE«1_E∑dE´ `E9_E –^EV•dEèsaE»QbEr‹`Er¨cErÏ_E´ `E´ädE7]E‰(dE´*`ErÃaEVÂ`E´*`EwcEGaE9ŒgE»¡eEVÖfE´ZgEèShE‰àhEWjE9ﬁkEókEVınE´∫pEèclE»ÅnEVrEè”oE‰8wEwrE»ërE»·wErrEV≈qE‰¯uE»qyE‰ÿwE»°{EèÉ~E p}E´*ÅE PÇEVÖÇE9˛ÄE‰ÇEˇÉE«ÑE ÿÜE9˛ÖE˜ÜE9âE‰ äEVïãEVêE‰∏êE êíEé+ìEé;íEéìîEwòE«QóE«iùE XùEè≥°Eg£E«ßE«q©ErÏ≠E9ÓÆE‰p∞Eèª≤Er|πE«—∑Eè∑EVªEèªEèkºE«˘ºE'¿E´Í¿E‰®√E´‚√EèK√E‰à≈E xπE_µE´‚ØEV›¨Er\¢EˇóErïE´:äE ËÖE´ÅEVÖzEwwE ÄrEVUdEV_E˜[EèTE‰hLErÃHEè≥?Er‹=E‰à;E«9E«!3E9N3E«¡.EVÂ)E‰¯*EG*EV’*E Ä'E @&Erº!E«·'EVÖ E« EVeE∑Er¸Er¨E«qE´˙E´˙E @E«aErLE‰¯EV•E‰ËEécEEr‹E´™EVuE‰E‰»E9˛EVïEéÉEVÖE´öE9ŒE‰ÿ¸D9N˛Dr<˛D«1 EVïÙD´™ˆD»±D9n˜D9ÓÙD ¿ÛDVUÛD‰˘D ÄÌD´äÈD´
+ÒD‰ÙD9.ÏDr‹ÍD´jñE@íEV’ëE´⁄îE∞êE´bîEVeìE´*êE´réE ëEV=éE´êE´rìE´‚ëE´⁄äEVΩïE´bèEVùíE îEV’ëE´¢ïE´ÇíEVñE´èE´≤èEVeìE´ÇçEVmêEVëE´ÇíEËèE´jåE èEV%çEVëEV=éEVïêE´≤îEPåEpèEVΩêEÄéE´öìEVçéE îEXéEVµéEVèEVåE(ëE†åE´“çE´jëEhçEVÕèE¿èEVeìE¿îE´BëE´:èEËîE´2íEëEV’åEVuíEV=ìE´ êEV˝åEV˝ëEVêE∏çE´íåE´⁄èE´ÚãE´äèEVUèEòèEV’åEVÌóE–éE´íñExåEVÂêEVeéE´ÍéE†ëE¿èE®âEVmïEVÂãE´jëE´åEVeìEVeéE®éE(ëEXìE®éE®ìE´BåE®éEV’ëE´ÚêEV]ëE´ÇíE´"éEV˝ëEV5ëEV’ëE´îE´ÚêEVêEV›ìEVîEVÌíEêíEòèEVΩêE´ êE´:èEVuçE ëE´"òEV}èEVçéEVòEVMóEV•èE`êEíEV5ëE´ZíE´öéE`êEVmïEìE8êEV≠ëE@çEV≈íE0ìEV’ëEòèE¯éE´jñEêíE»ëE´≤èEVùíEHîEV]ëEpèEPëE´“çEV›ìEVΩêEV%íEVΩêEHèEV=ìEÿêEVMçE´≤èEVΩïEV=ìE´JìEíEV-îEVîE´ÍìE´bîEV%óEVòE`ïE´rìEVùíEV’ëEV˝ñEòèE´‚ñE´:èEVîE¿îE´zïE´ZíEVUèE´BñEVMíEVùóEVìE`ïEV≠ëEVuíE´öìEàïE´∫ëE∞êEVÕèE´ÇíEV-èEV˝ëE´⁄èEÄìEXéE´™íE´*êEVUèEíE´íëE´ëEVΩêE´JìEVÖëE´¢êEòîEÄéE`öE‡íEV]ëE†ëEV’ëE´êE´˙íE´‚ëE†ëE´¢ïEåE´ êE´RïE´ÍéEpîE∏íE´ñEV›éEV˝ëEV-îE´ÇóE¿èE´"ìE´jëE»ëE´ÇçE´˙íEVçìEVÖñE∞ïE»ëE»ëE∞ïEVuíEËôE`ïE´ZíE´öìE–ìEòEVçìEV%íEÿêE´¢êEêíE´ZçEVeìEVÖëE`öE¯ìEVUîEVEöE´≤ôEVMíEVùíEVÕôE´¬ìEVıîE´⁄îE´"ìEXìE´äîEïEVıîEVÕôEV=òE´∫ñE´ ïEVÕîE ñE´jñE´öòE´“íE´õEV’ñEàïE´∫ñEVmöEVΩïE´õE´äôEúE ôEHîE´RïE´BõEòôEVeòE»ëE´jõEV’õEVÂöEVùúE0ùEñE´öE´⁄ôE´™úE´öE®òE¯òE´zïE´ÍùEàöE¿îEV5õEêíE´zïEPñE®òEVñE∏úEV•îEËôEVMóEVÖõE´≤ôEñE–òExõEV-ôEVùóEVÖñE´äôE´öìE(õEËûE´™úEV≈úEXùEV›òE8öEVıôEVıôEV%óEHôEòE´"ùE´zïEêúE´ôE´⁄ôE´íõEòEVMóE®òE´2úE∏óE®òEóEõEÄùE(ñEV≈óEúEV•ôE´zöEòEVöE´öE`öE´"ùEóEVïöE´2úE´öE´‚õE´*ïEV%úE@óEVÂöEVuóE(ñE´zïE¯òEVöEVmïE´öE ôEVΩöE´äôE´bôE0ùEòEXòE8öEVÌúEVeùEêúE´¬òE´“óEhóE´∫õEÄòEìEV%óE´ñEVöEúEVµòEVeòEPõE∞ïEV˝ñEV≠ñEV=òEV}îE¯ìE»ëE´RïE´bîE´⁄îE`ïE ôEVÖñE´bîEïE¯ìE îEV˝ëEV≈íE∞êE´öìEVÌíE¯ìE´JìEV˝ëE´ êEVìEVmêEËèE†åEV]ëEVıèEV5ëEV≠ÕE´"≈E8ÃE`ÃE´" EV•ÀEV≈…EVeœEVM…EV}ÀEVùŒE¿∆E`«E´¢«EVU∆E´ÍœE´¬ EV’ÕE´™…E´ÀE´äÀEà—EVıÀE0œE´zÃEVeœEÕEêŒE´≤ÀEV=œEP»EÄœE8ÃEV}–EVÕEV’ÕE∏ŒEpÀE ÀEV≈ŒE´™…E´zÃEÄ EVçœE‡ŒEX EVµ EpÀE´ÃEVuŒE0‘E ÕE@ŒE´B“EÄ EVù”EVΩ—EàÃEVœE ÀEêŒEPÕEË–EVÃEV’EVM”E´BÕE´2ŒE´ —EV›‘E´R—E´⁄ÀE0‘EàÃEVMŒEÿÃE ⁄EPÕEhŒEX E‘E ÕE∞—E´r E(“E´äÀE´≤–E´ÚÃEH–EàÃEÿ—EV%ŒE´ö‘E´˙ŒEV≠ÕEò–Ep–E´Ú—E∏”EVÖÕEê”E®œE´—EVı–E´∫“E»◊E‡”E´j“EVï—Eh”E´–E –E´j“E†“E´Ú—EV•’EV]»Eh”EVÃEVU’E´"‘EVÕ–E´r‘EVE—E8—E´:’EVeœE∏”EË’E8÷EV%”E´’E´≤ÀE¯œE´*—E´äÀE¨ä’E´j“E´ZŒEVù”E ◊EVÌ”EH’EVÖ“E(“E ’E´2”EV—E´∫“E@ÿEh”E´™”Eà÷Ep’E®‘E´™ŒE´™”EV“EV=œEV-ÀE»“EV%ÿE–‘E8—E—E‡”EVE—E´j“Eà—E´öœEV5“Ep–EVu”E´Ç…EV-’EVïÃE¨*÷E´í“E´B“E´*ÃE´‚“E†“E´BÕE´‚“E†“E∏”EVMŒE8÷EV—E¿’E´ä–EX‘E(“E´:’E´B“EhÿEVù”E®‘EV%ŒEVçœEV≠“E´“”EV˝ÕEx◊E¿–E¨JŸE´¬ Eò’E0œE´b–E´˙…E®‘EV“E0œEVm—EV%”Eÿ—EVÌ”EVïÃE”EVu”E´¬œE´Ç”E¨R€Eê”E´™”EV≈ŒE¨◊EË–E(◊E¯œEV⁄EVm—E¨í‹EVµ‘E´Í‘E`—E¨÷E´≤–E´–E8÷EÄœE ’E´R—E´ä–E∏›EŸE´‚“E´Z”E†“EVÌÿE´Ç”E¨™ÿE´≤–E¨¢€E∏”EV5ÕE´:’E´2”EV›‘E¨◊EV-’E´ö‘EV≈”EV=ŸE»“EVE€E∞÷E¨÷E◊EX‘EVU’EV‹EpﬂE¨€EV•⁄EÄ‘EVµ‘EêÿEVE—EVMÿE´Í‘E´j“E†◊EhÿE´:’EŸE@”E¨Ú€EVU’EH’E¨rŸE¨2ÿE´’E¨í◊E¨Ú÷E¨:⁄EÿEV}–E¨z÷E¨÷EV≈”E´ö‘E “EV=‘EVE÷EV%ÿEVeﬁE¨"ŸEVΩ€E‘E®ŸEV-’E¨⁄’E¨⁄’EP◊EV]◊E´Í‘EV≠◊Eò⁄EVm÷EV%›E´:’EVù›E¨Ç›EV≈›E¨◊EVm÷E¨:⁄E¨2ÿEV›ŸEVU⁄E¨€Eÿ€E◊EH’E¨⁄ﬂEà÷EVΩ÷Eÿ÷E¨∫◊E¨¢€E¨z‡E¨ÍﬁE¨bﬂEVï€EP◊EòﬂEVŸE¨öŸE¨™ÿEx·E¨€E¨∫‹E¨∫‹E†·EV€E8€E‚E¨¢€EVUﬂE†‹E¨j·E¨:ﬂEVm€E¨·EV„E¨bﬂEV•ﬂE¨í·E„E¨*‡EV’◊E¨‰EV•‰EV]ÊEVu›E¨ ÂEVµ„E¨¬ﬁE¨í‹EV]ÊE@›E¨™‚E`ÂEVçËEVù›EàÂEVÕ⁄Eÿ‡Eê‚EV‡EV’·E¨“‚E¨·E8ÂEV]·E¨‚ÊEVÖÊE¨*ÂE¨"ËE ÄâD òÖD LÅDV›|DVÂjDVcDVUD p_DVçOD ®^D´¢QDVÌXDVù]D´öJD ∏SD –hD ËdD´RoDVùvD´>ÜD´RãDV-îDVôõDVâ¶D´ﬁÆDV!ØD l∂DVaµDV•≤D´Z´D †D LöD îéDVıxD pxD´ÇgD ∏SD ∞LD HUD àBD´r@D´j9D´b2D´˙:D »/D Ä;DVÂ8D 8GDV54DVu:D´B/DV]>D´¬;D ‡DD´˙:D´r@D ÿ=DV-FDVCD´PD ∏:D´bKD´ÚLD´jRD´[D´“IDV•dD´‚WD´"^D xMD´WD ËKDVΩ`DVe^D´Z]D –ODVMbDV=TD ËdDV≈gD´bdD ¯rDV5fDVulD´"wDV≈gD´ÇgDVEtD ∞~DV5D –ÑDVäD HäD ÄâD çD´⁄ÖD´*öD çDVqëD ÙóD´éöD †D´¶ñD »ñDV9íD´ÜìD $êDV=âDVÌçDV˝ÇDV•ÄD ∏lD »aD `QD´
+ID´∫MDVıFDV54D Ë2D´R$DV•2D h&D $D´ÚDVï$DVçDV#D XD´˙!DV#D´2!DV›DVu!D´íD xD´“D `D´*DVıD àDVD ∞D ËDV≈DVÖDV5D´D xD´j DVUD –D  D´JD´JD´%D ¿(D »DVçD òD´JD´˙!D DVD òD´‚%D êD êD ( D PD Ä"DV#D

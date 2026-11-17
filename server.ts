@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import express, { Request, Response } from 'express';
+import fs from 'fs';
 import http from 'http';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
@@ -12,6 +13,10 @@ import {
   analyzeLsvTafel,
   analyzePeis,
   buildMnOFe5Co5BenchmarkData,
+  CvScanCurve,
+  extractGcdCycleFromMpr,
+  GcdCycleInput,
+  parseBioLogicMpr,
   parseBioLogicMpt,
 } from './src/engines/electrochemEngine';
 import {
@@ -27,7 +32,7 @@ import {
   analyzeBetIsotherm,
   analyzeSaedLattice2dFft,
   analyzeTgaKissinger,
-  buildSemStudioSmartMetadata,
+  generateSemMultiPageTiff,
   processNmrFid,
   runNipalsPlsSem,
 } from './src/engines/nmrAcousticMicroscopyThermalEngine';
@@ -211,19 +216,295 @@ async function startServer() {
   // 14.A Electrochemistry
   app.post('/api/v1/electrochem/analyze', (req: Request, res: Response) => {
     try {
-      const { rawMpt } = req.body ?? {};
+      const { rawMpt, rawMprBase64, dataset = 'benchmark', fileName } = req.body ?? {};
       const bench = buildMnOFe5Co5BenchmarkData();
+
+      const extractStabilizedCycle = (
+        rows: Record<string, number[]>,
+        targetCount = 120
+      ): { voltageV: number[]; currentMa: number[] } => {
+        const vAll = rows['Ewe/V'] ?? rows['<Ewe>/V'] ?? [];
+        const iAll = rows['<I>/mA'] ?? rows['I/mA'] ?? [];
+        const cycAll = rows['cycle number'] ?? [];
+        let startIdx = 0;
+        let endIdx = vAll.length;
+        if (cycAll.length === vAll.length && vAll.length > 0) {
+          const uniqueCycles = Array.from(new Set(cycAll.map((c) => Math.round(c)))).sort((a, b) => a - b);
+          const chosenCycle =
+            uniqueCycles.length >= 2 ? uniqueCycles[uniqueCycles.length - 2] : uniqueCycles[0];
+          const indices: number[] = [];
+          for (let i = 0; i < cycAll.length; i++) {
+            if (Math.round(cycAll[i]) === chosenCycle) indices.push(i);
+          }
+          if (indices.length >= 20) {
+            startIdx = indices[0];
+            endIdx = indices[indices.length - 1] + 1;
+          }
+        }
+        const vSlice = vAll.slice(startIdx, endIdx);
+        const iSlice = iAll.slice(startIdx, endIdx);
+        if (vSlice.length <= targetCount) return { voltageV: vSlice, currentMa: iSlice };
+        const voltageV: number[] = [];
+        const currentMa: number[] = [];
+        for (let k = 0; k < targetCount; k++) {
+          const idx = Math.min(
+            vSlice.length - 1,
+            Math.floor((k / (targetCount - 1)) * (vSlice.length - 1))
+          );
+          voltageV.push(vSlice[idx]);
+          currentMa.push(iSlice[idx]);
+        }
+        return { voltageV, currentMa };
+      };
+
+      // Case 1: Uploaded binary BioLogic .mpr
+      if (typeof rawMprBase64 === 'string' && rawMprBase64.trim()) {
+        const buf = Buffer.from(rawMprBase64, 'base64');
+        if (buf.byteLength === 0) {
+          return sendProblem(
+            res,
+            400,
+            'Empty .mpr Binary File',
+            `Uploaded file "${fileName ?? 'unknown.mpr'}" has 0 bytes.`,
+            req.path
+          );
+        }
+        const downsampleGcdCurves = (inputs: GcdCycleInput[], maxPts = 90) =>
+          inputs.map((c) => {
+            const t0 = c.timeChargeS[0] ?? 0;
+            const tAll = [...c.timeChargeS, ...c.timeDischargeS].map((t) => Number((t - t0).toFixed(3)));
+            const vAll = [...c.voltageChargeV, ...c.voltageDischargeV];
+            if (tAll.length <= maxPts) {
+              return { currentDensityAG: c.currentDensityAG, timeS: tAll, voltageV: vAll };
+            }
+            const timeS: number[] = [];
+            const voltageV: number[] = [];
+            for (let k = 0; k < maxPts; k++) {
+              const idx = Math.min(tAll.length - 1, Math.floor((k / (maxPts - 1)) * (tAll.length - 1)));
+              timeS.push(tAll[idx]);
+              voltageV.push(vAll[idx]);
+            }
+            return { currentDensityAG: c.currentDensityAG, timeS, voltageV };
+          });
+
+        const parsedMpr = parseBioLogicMpr(new Uint8Array(buf));
+        let cv = analyzeCvDunnTrasatti(bench.cvScans, 10);
+        let gcdInputs: GcdCycleInput[] = bench.gcdInputs;
+        let gcd = analyzeGcdCycles(gcdInputs);
+        let peis = analyzePeis(bench.peisInput);
+        let tafel = analyzeLsvTafel(bench.lsvV, bench.lsvI, peis.rsOhm);
+        let cvScans: CvScanCurve[] = bench.cvScans;
+
+        if (parsedMpr.technique === 'PEIS' && parsedMpr.rows['freq/Hz']?.length >= 4) {
+          peis = analyzePeis({
+            freqHz: parsedMpr.rows['freq/Hz'],
+            reZOhm: parsedMpr.rows['Re(Z)/Ohm'],
+            negImZOhm: parsedMpr.rows['-Im(Z)/Ohm'],
+          });
+          tafel = analyzeLsvTafel(bench.lsvV, bench.lsvI, peis.rsOhm);
+        } else if (parsedMpr.technique === 'CV/LSV' && parsedMpr.rows['Ewe/V']?.length >= 20) {
+          const extracted = extractStabilizedCycle(parsedMpr.rows);
+          if ((fileName ?? '').toLowerCase().includes('lsv')) {
+            tafel = analyzeLsvTafel(extracted.voltageV, extracted.currentMa, peis.rsOhm);
+          } else {
+            const rateGuess = /20mv/i.test(fileName ?? '') ? 20 : /50mv/i.test(fileName ?? '') ? 50 : 10;
+            cvScans = [
+              { scanRateMvS: rateGuess, voltageV: extracted.voltageV, currentMa: extracted.currentMa },
+              ...bench.cvScans.filter((s) => s.scanRateMvS !== rateGuess),
+            ];
+            cv = analyzeCvDunnTrasatti(cvScans, rateGuess);
+          }
+        } else if (parsedMpr.technique === 'GCD') {
+          const mMatch = (fileName ?? '').match(/(\d+(?:\.\d+)?)\s*mA/i);
+          const jGuess = mMatch ? parseFloat(mMatch[1]) : 4.0;
+          const gcdCycle = extractGcdCycleFromMpr(parsedMpr, jGuess, 1.0);
+          if (gcdCycle) {
+            gcdInputs = [gcdCycle];
+            gcd = analyzeGcdCycles(gcdInputs);
+          }
+        }
+
+        const physicsCheck = Critic.verifyPhysics({
+          rsOhm: peis.rsOhm,
+          rctOhm: peis.rctEstimateOhm,
+          capacitivePct: cv.dunnByScanRate[0]?.capacitivePct,
+        });
+        return res.json({
+          datasetSource: 'uploaded_mpr',
+          activeUpload: {
+            fileName: fileName ?? 'uploaded.mpr',
+            technique: parsedMpr.technique,
+            pointCount: parsedMpr.pointCount,
+            columns: parsedMpr.columns,
+          },
+          cv,
+          gcd,
+          gcdCurves: downsampleGcdCurves(gcdInputs),
+          peis,
+          tafel,
+          cvScans,
+          critic: physicsCheck,
+        });
+      }
+
+      // Case 2: Uploaded /Example/EcLab real BioLogic .mpr suite
+      if (dataset === 'example_mpt' || dataset === 'example_eclab') {
+        const exampleDir = path.resolve(process.cwd(), 'Example/EcLab');
+        const peisPath = path.join(exampleDir, 'MnOFe5Co5_20261112_PEIS_02_PEIS_C01.mpr');
+        const cv10Path = path.join(exampleDir, 'MnOFe5Co5_20261112_10mV_02_CV_C01.mpr');
+        const cv20Path = path.join(exampleDir, 'MnOFe5Co5_20261112_20mV_02_CV_C01.mpr');
+        const lsvPath = path.join(exampleDir, 'MnOFe5Co5_20261112_10mV_LSV_C01.mpr');
+        const gcdSpecs = [
+          { file: 'MnOFe5Co5_20261112_4mA_C01.mpr', jg: 4 },
+          { file: 'MnOFe5Co5_20261112_6mA_C01.mpr', jg: 6 },
+          { file: 'MnOFe5Co5_20261112_8mA_C01.mpr', jg: 8 },
+          { file: 'MnOFe5Co5_20261112_10mA_C01.mpr', jg: 10 },
+        ];
+
+        const parsedPeis = parseBioLogicMpr(new Uint8Array(fs.readFileSync(peisPath)));
+        const parsedCv10 = parseBioLogicMpr(new Uint8Array(fs.readFileSync(cv10Path)));
+        const parsedCv20 = parseBioLogicMpr(new Uint8Array(fs.readFileSync(cv20Path)));
+        const parsedLsv = parseBioLogicMpr(new Uint8Array(fs.readFileSync(lsvPath)));
+
+        const realGcdInputs: GcdCycleInput[] = [];
+        const gcdSummary: { file: string; technique: string; points?: number }[] = [];
+        for (const spec of gcdSpecs) {
+          const fp = path.join(exampleDir, spec.file);
+          if (fs.existsSync(fp)) {
+            const parsedG = parseBioLogicMpr(new Uint8Array(fs.readFileSync(fp)));
+            const cyc = extractGcdCycleFromMpr(parsedG, spec.jg, 1.0);
+            if (cyc) realGcdInputs.push(cyc);
+            gcdSummary.push({ file: spec.file, technique: `GCD ${spec.jg} mA`, points: parsedG.pointCount });
+          }
+        }
+
+        const peis = analyzePeis({
+          freqHz: parsedPeis.rows['freq/Hz'],
+          reZOhm: parsedPeis.rows['Re(Z)/Ohm'],
+          negImZOhm: parsedPeis.rows['-Im(Z)/Ohm'],
+        });
+
+        const c10 = extractStabilizedCycle(parsedCv10.rows);
+        const c20 = extractStabilizedCycle(parsedCv20.rows);
+        const realCvScans: CvScanCurve[] = [
+          { scanRateMvS: 10, voltageV: c10.voltageV, currentMa: c10.currentMa },
+          { scanRateMvS: 20, voltageV: c20.voltageV, currentMa: c20.currentMa },
+        ];
+        const cv = analyzeCvDunnTrasatti(realCvScans, 10);
+
+        const lsvExt = extractStabilizedCycle(parsedLsv.rows, 200);
+        const tafel = analyzeLsvTafel(lsvExt.voltageV, lsvExt.currentMa, peis.rsOhm);
+        const activeGcdInputs = realGcdInputs.length > 0 ? realGcdInputs : bench.gcdInputs;
+        const gcd = analyzeGcdCycles(activeGcdInputs);
+        const gcdCurves = activeGcdInputs.map((c) => {
+          const t0 = c.timeChargeS[0] ?? 0;
+          const tAll = [...c.timeChargeS, ...c.timeDischargeS].map((t) => Number((t - t0).toFixed(3)));
+          const vAll = [...c.voltageChargeV, ...c.voltageDischargeV];
+          const maxPts = 90;
+          if (tAll.length <= maxPts) return { currentDensityAG: c.currentDensityAG, timeS: tAll, voltageV: vAll };
+          const timeS: number[] = [];
+          const voltageV: number[] = [];
+          for (let k = 0; k < maxPts; k++) {
+            const idx = Math.min(tAll.length - 1, Math.floor((k / (maxPts - 1)) * (tAll.length - 1)));
+            timeS.push(tAll[idx]);
+            voltageV.push(vAll[idx]);
+          }
+          return { currentDensityAG: c.currentDensityAG, timeS, voltageV };
+        });
+
+        const physicsCheck = Critic.verifyPhysics({
+          rsOhm: peis.rsOhm,
+          rctOhm: peis.rctEstimateOhm,
+          capacitivePct: cv.dunnByScanRate.find((d) => d.scanRateMvS === 10)?.capacitivePct,
+        });
+
+        return res.json({
+          datasetSource: 'example_eclab',
+          mprFilesSummary: [
+            { file: 'MnOFe5Co5_20261112_PEIS_02_PEIS_C01.mpr', technique: 'PEIS', points: parsedPeis.pointCount },
+            { file: 'MnOFe5Co5_20261112_10mV_02_CV_C01.mpr', technique: 'CV 10mV/s', points: parsedCv10.pointCount },
+            { file: 'MnOFe5Co5_20261112_20mV_02_CV_C01.mpr', technique: 'CV 20mV/s', points: parsedCv20.pointCount },
+            { file: 'MnOFe5Co5_20261112_10mV_LSV_C01.mpr', technique: 'LSV', points: parsedLsv.pointCount },
+            ...gcdSummary,
+          ],
+          cv,
+          gcd,
+          gcdCurves,
+          peis,
+          tafel,
+          cvScans: realCvScans,
+          critic: physicsCheck,
+        });
+      }
+
+      // Case 3: Benchmark or ASCII .mpt upload
       const parsedMpt = typeof rawMpt === 'string' && rawMpt.trim() ? parseBioLogicMpt(rawMpt) : null;
-      const cv = analyzeCvDunnTrasatti(bench.cvScans, 10);
-      const gcd = analyzeGcdCycles(bench.gcdInputs);
-      const peis = analyzePeis(bench.peisInput);
-      const tafel = analyzeLsvTafel(bench.lsvV, bench.lsvI, peis.rsOhm);
+      let peisInput = bench.peisInput;
+      let cvScans = bench.cvScans;
+      let gcdInputs = bench.gcdInputs;
+      let lsvV = bench.lsvV;
+      let lsvI = bench.lsvI;
+      let mptTechnique: string | undefined;
+
+      if (parsedMpt) {
+        if (parsedMpt.rows['freq/Hz']?.length && parsedMpt.rows['Re(Z)/Ohm']?.length && parsedMpt.rows['-Im(Z)/Ohm']?.length) {
+          mptTechnique = 'PEIS';
+          peisInput = {
+            freqHz: parsedMpt.rows['freq/Hz'],
+            reZOhm: parsedMpt.rows['Re(Z)/Ohm'],
+            negImZOhm: parsedMpt.rows['-Im(Z)/Ohm'],
+          };
+        } else if (parsedMpt.rows['Ewe/V']?.length >= 20 && (parsedMpt.rows['<I>/mA']?.length || parsedMpt.rows['I/mA']?.length)) {
+          const ext = extractStabilizedCycle(parsedMpt.rows);
+          if ((fileName ?? '').toLowerCase().includes('lsv')) {
+            mptTechnique = 'LSV';
+            lsvV = ext.voltageV;
+            lsvI = ext.currentMa;
+          } else {
+            mptTechnique = 'CV';
+            const rateGuess = /20mv/i.test(fileName ?? '') ? 20 : /50mv/i.test(fileName ?? '') ? 50 : 10;
+            cvScans = [
+              { scanRateMvS: rateGuess, voltageV: ext.voltageV, currentMa: ext.currentMa },
+              ...bench.cvScans.filter((s) => s.scanRateMvS !== rateGuess),
+            ];
+          }
+        } else if (parsedMpt.rows['Ewe/V']?.length >= 10 && parsedMpt.rows['time/s']?.length >= 10) {
+          const gcdCycle = extractGcdCycleFromMpr(parsedMpt, 4.0, 1.0);
+          if (gcdCycle) {
+            mptTechnique = 'GCD';
+            gcdInputs = [gcdCycle];
+          }
+        }
+      }
+
+      const cv = analyzeCvDunnTrasatti(cvScans, 10);
+      const gcd = analyzeGcdCycles(gcdInputs);
+      const gcdCurves = gcdInputs.map((c) => {
+        const t0 = c.timeChargeS[0] ?? 0;
+        return {
+          currentDensityAG: c.currentDensityAG,
+          timeS: [...c.timeChargeS, ...c.timeDischargeS].map((t) => Number((t - t0).toFixed(3))),
+          voltageV: [...c.voltageChargeV, ...c.voltageDischargeV],
+        };
+      });
+      const peis = analyzePeis(peisInput);
+      const tafel = analyzeLsvTafel(lsvV, lsvI, peis.rsOhm);
       const physicsCheck = Critic.verifyPhysics({
         rsOhm: peis.rsOhm,
         rctOhm: peis.rctEstimateOhm,
         capacitivePct: cv.dunnByScanRate.find((d) => d.scanRateMvS === 10)?.capacitivePct,
       });
-      res.json({ parsedMpt, cv, gcd, peis, tafel, cvScans: bench.cvScans, critic: physicsCheck });
+      res.json({
+        datasetSource: parsedMpt ? 'uploaded_mpt' : 'benchmark',
+        parsedMpt: parsedMpt ? { ...parsedMpt, technique: mptTechnique } : null,
+        cv,
+        gcd,
+        gcdCurves,
+        peis,
+        tafel,
+        cvScans,
+        critic: physicsCheck,
+      });
     } catch (err) {
       sendProblem(res, 400, 'Electrochemistry Error', String(err), req.path);
     }
@@ -355,13 +636,23 @@ async function startServer() {
   app.post('/api/v1/sem-spm/standardize', (req: Request, res: Response) => {
     try {
       const { nmPerPx = 1.25, scalebarNm = 100, dLatticeNm = 0.245 } = req.body ?? {};
-      const semMeta = buildSemStudioSmartMetadata({
+      const N = 64;
+      const rawGrayscale = new Uint8Array(N * N);
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          const grain = Math.sin(x * 0.35) * Math.cos(y * 0.35) * 42 + Math.sin((x + y) * 0.18) * 28;
+          rawGrayscale[y * N + x] = Math.max(0, Math.min(255, Math.round(95 + grain)));
+        }
+      }
+      const semTiff = generateSemMultiPageTiff({
+        width: N,
+        height: N,
+        rawGrayscale,
         nmPerPx,
         cropBottomPx: 64,
         scalebarNm,
         roiMeanRgb: [42, 46, 54],
       });
-      const N = 64;
       const pxNm = 0.025;
       const hrtem = Array.from({ length: N }, (_, y) =>
         Array.from({ length: N }, (_, x) => Math.cos((2 * Math.PI * (x * pxNm)) / dLatticeNm))
@@ -371,10 +662,43 @@ async function startServer() {
         Array.from({ length: 24 }, (_, x) => 0.45 * x - 0.28 * y + 1.8 * Math.sin(x * 0.5) * Math.cos(y * 0.4))
       );
       const afm = analyzeAfmPlaneLeveling(afmRaw);
-      res.json({ semMeta, saed, afm });
+      res.json({
+        semMeta: semTiff.semMeta,
+        tiffBase64: semTiff.tiffBase64,
+        tiffByteLength: semTiff.tiffByteLength,
+        frameCount: semTiff.frameCount,
+        ifdOffsets: semTiff.ifdOffsets,
+        saed,
+        afm,
+      });
     } catch (err) {
       sendProblem(res, 400, 'Microscopy Error', String(err), req.path);
     }
+  });
+
+  app.get('/api/v1/sem-spm/tiff', (req: Request, res: Response) => {
+    const nmPerPx = Number(req.query.nmPerPx ?? 1.25) || 1.25;
+    const scalebarNm = Number(req.query.scalebarNm ?? 100) || 100;
+    const N = 64;
+    const rawGrayscale = new Uint8Array(N * N);
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) {
+        const grain = Math.sin(x * 0.35) * Math.cos(y * 0.35) * 42 + Math.sin((x + y) * 0.18) * 28;
+        rawGrayscale[y * N + x] = Math.max(0, Math.min(255, Math.round(95 + grain)));
+      }
+    }
+    const semTiff = generateSemMultiPageTiff({
+      width: N,
+      height: N,
+      rawGrayscale,
+      nmPerPx,
+      cropBottomPx: 64,
+      scalebarNm,
+      roiMeanRgb: [42, 46, 54],
+    });
+    res.setHeader('Content-Type', 'image/tiff');
+    res.setHeader('Content-Disposition', 'attachment; filename="labflow_sem_dual_frame.tif"');
+    res.send(Buffer.from(semTiff.tiffBytes));
   });
 
   // 14.G Thermal / BET / PLS-SEM
@@ -542,25 +866,19 @@ async function startServer() {
     res.json({ xSpec, ySpec, memGuard, tot });
   });
 
-  // Vite middleware or static dist
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.resolve(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
   const server = http.createServer(app);
 
-  // WebSocket Hub (/ws/v1/stream) supporting Binary ChartState (<Idddd) & CRDT JSON
-  const wss = new WebSocketServer({ server, path: '/ws/v1/stream' });
+  // WebSocket Hub (/ws/v1/stream) using noServer + path-scoped upgrade so Vite/other sockets never collide
+  const wss = new WebSocketServer({ noServer: true });
+  server.on('upgrade', (request, socket, head) => {
+    const pathname = (request.url ?? '').split('?')[0];
+    if (pathname === '/ws/v1/stream') {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    }
+  });
+
   wss.on('connection', (ws: WebSocket) => {
     // Send an initial binary ChartState calibration frame
     const xs = Array.from({ length: 64 }, (_, i) => (i / 63) * 0.8);
@@ -589,9 +907,53 @@ async function startServer() {
     });
   });
 
-  const PORT = 3000;
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`LabFlow Scientific OS listening on http://localhost:${PORT}`);
+  // Vite middleware or static dist (initialized asynchronously while port 3000 is already listening)
+  let viteInitError: unknown = null;
+  const viteReadyPromise =
+    process.env.NODE_ENV !== 'production'
+      ? (() => {
+          const disableHmr = process.env.DISABLE_HMR === 'true';
+          return createViteServer({
+            server: {
+              middlewareMode: true,
+              hmr: disableHmr ? false : { server },
+              allowedHosts: true,
+              watch: disableHmr ? null : undefined,
+            },
+            appType: 'spa',
+          }).catch((err) => {
+            viteInitError = err;
+            console.error('Vite middleware initialization failed:', err);
+            return null;
+          });
+        })()
+      : Promise.resolve(null);
+
+  if (process.env.NODE_ENV !== 'production') {
+    app.use(async (req, res, next) => {
+      const vite = await viteReadyPromise;
+      if (!vite) {
+        return res.status(500).send(`Vite failed to initialize: ${String(viteInitError)}`);
+      }
+      return vite.middlewares(req, res, next);
+    });
+  } else {
+    const distPath = path.resolve(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  const getArg = (flag: string): string | undefined => {
+    const idx = process.argv.indexOf(flag);
+    return idx >= 0 ? process.argv[idx + 1] : undefined;
+  };
+  const PORT = Number(getArg('--port') ?? process.env.PORT ?? 3000) || 3000;
+  const HOST = getArg('--host') ?? process.env.HOST ?? '0.0.0.0';
+
+  server.listen(PORT, HOST, () => {
+    console.log(`Server running on http://${HOST}:${PORT}`);
   });
 }
 

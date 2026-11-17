@@ -15,8 +15,10 @@ export const WorkbenchView: React.FC<WorkbenchViewProps> = ({ isDark, onToggleTh
   const [loading, setLoading] = useState(false);
 
   // Electrochemistry state
-  const [ecMode, setEcMode] = useState<'cv_dunn' | 'nyquist' | 'tafel' | 'ws_stream'>('cv_dunn');
+  const [ecDataset, setEcDataset] = useState<'benchmark' | 'example_mpt'>('benchmark');
+  const [ecMode, setEcMode] = useState<'cv_dunn' | 'gcd' | 'nyquist' | 'tafel' | 'ws_stream'>('cv_dunn');
   const [ecData, setEcData] = useState<any>(null);
+  const [ecNotice, setEcNotice] = useState<string | null>(null);
   const [wsFrame, setWsFrame] = useState<{ seriesId: number; x: number[]; y: number[] } | null>(null);
 
   // XRD state
@@ -61,12 +63,23 @@ export const WorkbenchView: React.FC<WorkbenchViewProps> = ({ isDark, onToggleTh
     return () => ws.close();
   }, []);
 
-  const runDomainAnalysis = async (target: DomainTab) => {
+  const runDomainAnalysis = async (target: DomainTab, datasetOverride?: 'benchmark' | 'example_mpt') => {
     setLoading(true);
     try {
       if (target === 'electrochem') {
-        const r = await fetch('/api/v1/electrochem/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-        setEcData(await r.json());
+        const chosenDataset = datasetOverride ?? ecDataset;
+        setEcNotice(null);
+        const r = await fetch('/api/v1/electrochem/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataset: chosenDataset }),
+        });
+        const payload = await r.json();
+        if (!r.ok) {
+          setEcNotice(payload.detail ?? payload.title ?? 'Electrochemistry analysis error');
+        } else {
+          setEcData(payload);
+        }
       } else if (target === 'xrd') {
         const r = await fetch('/api/v1/xrd/convert', {
           method: 'POST',
@@ -127,6 +140,58 @@ export const WorkbenchView: React.FC<WorkbenchViewProps> = ({ isDark, onToggleTh
     runDomainAnalysis(domain);
   }, [domain]);
 
+  const handleEcFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLoading(true);
+    setEcNotice(null);
+    try {
+      const isBinaryMpr = file.name.toLowerCase().endsWith('.mpr');
+      let bodyPayload: Record<string, string>;
+      if (isBinaryMpr) {
+        const buf = new Uint8Array(await file.arrayBuffer());
+        let bin = '';
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+        bodyPayload = { rawMprBase64: btoa(bin), fileName: file.name };
+      } else {
+        const text = await file.text();
+        bodyPayload = { rawMpt: text, fileName: file.name };
+      }
+      const r = await fetch('/api/v1/electrochem/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyPayload),
+      });
+      const payload = await r.json();
+      if (!r.ok) {
+        setEcNotice(payload.detail ?? payload.title ?? `Failed to parse ${file.name}`);
+      } else {
+        setEcData(payload);
+        setEcNotice(`Parsed ${file.name} (${payload.activeUpload?.pointCount ?? payload.parsedMpt?.columns?.length ?? 'ok'} records)`);
+      }
+    } catch (err) {
+      setEcNotice(String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadSemTiff = () => {
+    if (!semData?.tiffBase64) return;
+    const bin = atob(semData.tiffBase64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'image/tiff' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'labflow_sem_dual_frame.tif';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const domainTabs: { id: DomainTab; label: string }[] = [
     { id: 'electrochem', label: 'Electrochemistry' },
     { id: 'xrd', label: 'XRD & Bragg' },
@@ -148,12 +213,49 @@ export const WorkbenchView: React.FC<WorkbenchViewProps> = ({ isDark, onToggleTh
           series: [{ id: 'ws', label: `Series #${wsFrame.seriesId}`, x: wsFrame.x, y: wsFrame.y, color: '#0891b2' }],
         };
       }
-      if (ecMode === 'nyquist') {
+      if (ecMode === 'gcd' && Array.isArray(ecData.gcdCurves)) {
+        const palette = ['#2563eb', '#0891b2', '#d97706', '#7c3aed'];
+        const srcTag =
+          ecData.datasetSource === 'example_eclab' || ecData.datasetSource === 'example_mpt'
+            ? 'Real BioLogic .mpr (/Example/EcLab)'
+            : ecData.activeUpload?.fileName ?? 'MnOFe5Co5 Benchmark';
         return {
-          title: 'PEIS Nyquist Plot — MnOFe5Co5 Benchmark',
+          title: `GCD Nonlinear Charge/Discharge — ${srcTag}`,
+          xLabel: 'Time (s)',
+          yLabel: 'Potential Ewe (V)',
+          series: ecData.gcdCurves.map((c: any, idx: number) => ({
+            id: `gcd-${c.currentDensityAG}`,
+            label: `${c.currentDensityAG} A/g (${ecData.gcd[idx]?.cIntegralFG ?? '—'} F/g)`,
+            x: c.timeS,
+            y: c.voltageV,
+            color: palette[idx % palette.length],
+            lineWidth: 2,
+          })),
+        };
+      }
+      if (ecMode === 'nyquist') {
+        const srcTag =
+          ecData.datasetSource === 'example_eclab' || ecData.datasetSource === 'example_mpt'
+            ? 'Real BioLogic .mpr (/Example/EcLab)'
+            : ecData.activeUpload?.fileName ?? 'MnOFe5Co5 Benchmark';
+        const nyqSeries: ChartSeries[] = [
+          { id: 'nyq', label: 'PEIS Experimental', x: ecData.peis.reZOhm, y: ecData.peis.negImZOhm, color: '#2563eb', lineWidth: 2 },
+        ];
+        if (Array.isArray(ecData.peis.kkReFitOhm) && Array.isArray(ecData.peis.kkNegImFitOhm)) {
+          nyqSeries.push({
+            id: 'linkk',
+            label: 'Lin-KK Voigt Fit',
+            x: ecData.peis.kkReFitOhm,
+            y: ecData.peis.kkNegImFitOhm,
+            color: '#d97706',
+            dashed: true,
+          });
+        }
+        return {
+          title: `PEIS Nyquist & Lin-KK Validation — ${srcTag}`,
           xLabel: "Z' Re(Z) (Ohm)",
           yLabel: "-Z'' -Im(Z) (Ohm)",
-          series: [{ id: 'nyq', label: 'PEIS Experimental', x: ecData.peis.reZOhm, y: ecData.peis.negImZOhm, color: '#2563eb' }],
+          series: nyqSeries,
         };
       }
       if (ecMode === 'tafel') {
@@ -164,8 +266,12 @@ export const WorkbenchView: React.FC<WorkbenchViewProps> = ({ isDark, onToggleTh
           series: [{ id: 'taf', label: 'iR-Corrected Tafel', x: ecData.tafel.logCurrentDensity, y: ecData.tafel.logCurrentDensity.map((lj: number) => ecData.tafel.tafelSlopeMvDec * lj + 120), color: '#d97706' }],
         };
       }
+      const cvTag =
+        ecData.datasetSource === 'example_eclab' || ecData.datasetSource === 'example_mpt'
+          ? 'Real .mpr 10 & 20 mV/s'
+          : 'MnOFe5Co5_20261112';
       return {
-        title: 'CV Dunn Separation at 10 mV/s — MnOFe5Co5_20261112',
+        title: `CV Dunn Separation — ${cvTag}`,
         xLabel: 'Potential (V vs. Ag/AgCl)',
         yLabel: 'Current (mA)',
         series: [
@@ -301,6 +407,22 @@ export const WorkbenchView: React.FC<WorkbenchViewProps> = ({ isDark, onToggleTh
             {domain === 'electrochem' && (
               <>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Data Source
+                  <select
+                    value={ecDataset}
+                    onChange={(e) => {
+                      const next = e.target.value as 'benchmark' | 'example_mpt';
+                      setEcDataset(next);
+                      runDomainAnalysis('electrochem', next);
+                    }}
+                    className="mt-1.5 block w-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                  >
+                    <option value="benchmark">MnOFe5Co5 Synthetic Benchmark</option>
+                    <option value="example_mpt">Uploaded /Example/EcLab Real .mpr</option>
+                  </select>
+                </label>
+
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
                   Plot Mode
                   <select
                     value={ecMode}
@@ -308,11 +430,29 @@ export const WorkbenchView: React.FC<WorkbenchViewProps> = ({ isDark, onToggleTh
                     className="mt-1.5 block w-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   >
                     <option value="cv_dunn">CV Dunn Separation (10 mV/s)</option>
-                    <option value="nyquist">PEIS Nyquist & Zero-Crossover</option>
+                    <option value="gcd">GCD Charge / Discharge</option>
+                    <option value="nyquist">PEIS Nyquist &amp; Lin-KK Fit</option>
                     <option value="tafel">LSV iR-Compensated Tafel</option>
                     <option value="ws_stream">WebSocket Binary ChartState</option>
                   </select>
                 </label>
+
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Upload BioLogic (.mpr / .mpt)
+                  <input
+                    type="file"
+                    accept=".mpr,.mpt"
+                    onChange={handleEcFileUpload}
+                    className="mt-1.5 block w-full border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700 file:mr-2 file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs file:font-medium dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:file:bg-slate-800"
+                  />
+                </label>
+
+                {ecNotice && (
+                  <p className="border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                    {ecNotice}
+                  </p>
+                )}
+
                 {ecData && (
                   <div className="space-y-2 border-t border-slate-200 pt-3 text-xs dark:border-slate-800">
                     <div className="flex justify-between">
@@ -332,9 +472,21 @@ export const WorkbenchView: React.FC<WorkbenchViewProps> = ({ isDark, onToggleTh
                       <span className="font-mono font-semibold">{ecData.peis.warburgSigma} Ω·s⁻¹/²</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">KK Causality Residual</span>
-                      <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">
-                        {ecData.peis.kkResidualPct}% (&lt;1%)
+                      <span className="text-slate-500">KK Method</span>
+                      <span className="font-mono font-semibold">{ecData.peis.kkMethod ?? 'Lin-KK-Voigt'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Lin-KK RMS / Max</span>
+                      <span
+                        className={`font-mono font-semibold ${
+                          ecData.peis.kkResidualPct < 1
+                            ? 'text-emerald-700 dark:text-emerald-400'
+                            : ecData.peis.kkResidualPct < 5
+                            ? 'text-amber-700 dark:text-amber-400'
+                            : 'text-rose-700 dark:text-rose-400'
+                        }`}
+                      >
+                        {ecData.peis.kkResidualPct}% / {ecData.peis.kkMaxResidualPct}%
                       </span>
                     </div>
                   </div>
@@ -491,8 +643,17 @@ export const WorkbenchView: React.FC<WorkbenchViewProps> = ({ isDark, onToggleTh
                   onClick={() => runDomainAnalysis('sem_spm')}
                   className="w-full bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700"
                 >
-                  Run SAED 2D-FFT & AFM Leveling
+                  Run SAED 2D-FFT &amp; AFM Leveling
                 </button>
+                {semData?.tiffBase64 && (
+                  <button
+                    type="button"
+                    onClick={handleDownloadSemTiff}
+                    className="w-full border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    Download Dual-Frame .tif ({semData.tiffByteLength} B)
+                  </button>
+                )}
               </>
             )}
 
@@ -540,7 +701,9 @@ export const WorkbenchView: React.FC<WorkbenchViewProps> = ({ isDark, onToggleTh
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-500">GCD Integral C_int (1 A/g)</div>
+                  <div className="text-xs text-slate-500">
+                    GCD Integral C_int ({ecData.gcd[0]?.currentDensityAG ?? 1} A/g)
+                  </div>
                   <div className="mt-1 font-mono text-xl font-semibold tabular-nums">
                     {ecData.gcd[0]?.cIntegralFG} <span className="text-xs font-normal text-slate-400">F/g</span>
                   </div>
@@ -677,9 +840,9 @@ export const WorkbenchView: React.FC<WorkbenchViewProps> = ({ isDark, onToggleTh
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-500">Residual Tilt Slope</div>
-                  <div className="mt-1 font-mono text-xl font-semibold tabular-nums">
-                    {semData.afm.residualSlope.toExponential(1)}
+                  <div className="text-xs text-slate-500">Dual-Frame Multi-Page TIFF</div>
+                  <div className="mt-1 font-mono text-sm font-semibold tabular-nums">
+                    {semData.frameCount ?? 2} IFDs · {semData.tiffByteLength ?? 0} B
                   </div>
                 </div>
                 <div>

@@ -438,6 +438,234 @@ export function buildSemStudioSmartMetadata(params: {
   };
 }
 
+export interface SemMultiPageTiffResult {
+  semMeta: ReturnType<typeof buildSemStudioSmartMetadata>;
+  tiffBytes: Uint8Array;
+  tiffBase64: string;
+  tiffByteLength: number;
+  frameCount: number;
+  ifdOffsets: number[];
+}
+
+export interface ParsedTiffIfdSummary {
+  magic: string;
+  frameCount: number;
+  ifdOffsets: number[];
+  widths: number[];
+  heights: number[];
+  pageNumbers: [number, number][];
+  imageDescriptions: string[];
+}
+
+/**
+ * Encodes a genuine Little-Endian Baseline TIFF 6.0 multi-page grayscale image
+ * (`II*\0`, chained IFDs, ascending sorted tags, Tag 270 ASCII metadata).
+ */
+export function encodeMultiPageGrayscaleTiff(
+  width: number,
+  height: number,
+  frames: Uint8Array[],
+  imageDescription: string
+): { tiffBytes: Uint8Array; ifdOffsets: number[] } {
+  if (frames.length === 0) throw new Error('At least one grayscale frame is required.');
+  const stripSize = width * height;
+  for (const frame of frames) {
+    if (frame.length !== stripSize) {
+      throw new Error(`Frame length ${frame.length} does not match ${width}x${height}=${stripSize}.`);
+    }
+  }
+
+  const encoder = new TextEncoder();
+  const descRaw = encoder.encode(imageDescription);
+  const descBytes = new Uint8Array(descRaw.length + 1);
+  descBytes.set(descRaw, 0);
+  descBytes[descRaw.length] = 0; // null-terminated ASCII
+  const descPaddedLen = descBytes.length + (descBytes.length % 2);
+
+  // Each IFD has 10 entries (2 + 10*12 + 4 = 126 bytes) + ImageDescription + pixel strip
+  const nTags = 10;
+  const ifdSize = 2 + nTags * 12 + 4;
+  const perFrameBlockSize = ifdSize + descPaddedLen + stripSize;
+  const totalBytes = 8 + frames.length * perFrameBlockSize;
+
+  const out = new Uint8Array(totalBytes);
+  const view = new DataView(out.buffer);
+
+  // TIFF Header: "II", 42, IFD0 offset = 8
+  out[0] = 0x49;
+  out[1] = 0x49;
+  view.setUint16(2, 42, true);
+  view.setUint32(4, 8, true);
+
+  const ifdOffsets: number[] = [];
+
+  for (let f = 0; f < frames.length; f++) {
+    const ifdOffset = 8 + f * perFrameBlockSize;
+    ifdOffsets.push(ifdOffset);
+    const descOffset = ifdOffset + ifdSize;
+    const stripOffset = descOffset + descPaddedLen;
+    const nextIfdOffset = f + 1 < frames.length ? 8 + (f + 1) * perFrameBlockSize : 0;
+
+    view.setUint16(ifdOffset, nTags, true);
+
+    const writeTag = (
+      idx: number,
+      tag: number,
+      type: number,
+      count: number,
+      valueOrOffset: number
+    ) => {
+      const off = ifdOffset + 2 + idx * 12;
+      view.setUint16(off, tag, true);
+      view.setUint16(off + 2, type, true);
+      view.setUint32(off + 4, count, true);
+      if (type === 3 && count === 1) {
+        view.setUint16(off + 8, valueOrOffset, true);
+        view.setUint16(off + 10, 0, true);
+      } else {
+        view.setUint32(off + 8, valueOrOffset, true);
+      }
+    };
+
+    // Tags MUST be sorted strictly ascending per TIFF 6.0 spec
+    writeTag(0, 256, 4, 1, width); // ImageWidth (LONG)
+    writeTag(1, 257, 4, 1, height); // ImageLength (LONG)
+    writeTag(2, 258, 3, 1, 8); // BitsPerSample (SHORT)
+    writeTag(3, 259, 3, 1, 1); // Compression: None (SHORT)
+    writeTag(4, 262, 3, 1, 1); // PhotometricInterpretation: BlackIsZero (SHORT)
+    writeTag(5, 270, 2, descBytes.length, descOffset); // ImageDescription (ASCII)
+    writeTag(6, 273, 4, 1, stripOffset); // StripOffsets (LONG)
+    writeTag(7, 278, 4, 1, height); // RowsPerStrip (LONG)
+    writeTag(8, 279, 4, 1, stripSize); // StripByteCounts (LONG)
+    writeTag(9, 297, 3, 2, (f & 0xffff) | ((frames.length & 0xffff) << 16)); // PageNumber (SHORT[2])
+
+    view.setUint32(ifdOffset + 2 + nTags * 12, nextIfdOffset, true);
+
+    out.set(descBytes, descOffset);
+    out.set(frames[f], stripOffset);
+  }
+
+  return { tiffBytes: out, ifdOffsets };
+}
+
+/** Parses IFD chain & Tag 270 metadata from a Little-Endian TIFF binary buffer. */
+export function parseTiffIfdSummary(bytes: Uint8Array): ParsedTiffIfdSummary {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const magic = String.fromCharCode(bytes[0], bytes[1]) + ':' + view.getUint16(2, true);
+  let offset = view.getUint32(4, true);
+  const decoder = new TextDecoder();
+
+  const ifdOffsets: number[] = [];
+  const widths: number[] = [];
+  const heights: number[] = [];
+  const pageNumbers: [number, number][] = [];
+  const imageDescriptions: string[] = [];
+
+  while (offset > 0 && offset + 2 <= bytes.byteLength) {
+    ifdOffsets.push(offset);
+    const nTags = view.getUint16(offset, true);
+    let w = 0;
+    let h = 0;
+    let page: [number, number] = [0, 1];
+    let desc = '';
+
+    for (let i = 0; i < nTags; i++) {
+      const e = offset + 2 + i * 12;
+      const tag = view.getUint16(e, true);
+      const type = view.getUint16(e + 2, true);
+      const count = view.getUint32(e + 4, true);
+      const val = view.getUint32(e + 8, true);
+
+      if (tag === 256) w = val;
+      else if (tag === 257) h = val;
+      else if (tag === 297 && type === 3 && count === 2) {
+        page = [view.getUint16(e + 8, true), view.getUint16(e + 10, true)];
+      } else if (tag === 270 && type === 2 && val + count <= bytes.byteLength) {
+        desc = decoder.decode(bytes.subarray(val, val + Math.max(0, count - 1)));
+      }
+    }
+
+    widths.push(w);
+    heights.push(h);
+    pageNumbers.push(page);
+    imageDescriptions.push(desc);
+    offset = view.getUint32(offset + 2 + nTags * 12, true);
+  }
+
+  return {
+    magic,
+    frameCount: ifdOffsets.length,
+    ifdOffsets,
+    widths,
+    heights,
+    pageNumbers,
+    imageDescriptions,
+  };
+}
+
+/**
+ * Generates a dual-frame multi-page SEM TIFF:
+ * - Frame 0: raw 8-bit grayscale acquisition
+ * - Frame 1: adaptive contrast-stretched grayscale with polarity calibration
+ */
+export function generateSemMultiPageTiff(params: {
+  width: number;
+  height: number;
+  rawGrayscale: Uint8Array;
+  nmPerPx: number;
+  cropBottomPx: number;
+  scalebarNm: number;
+  roiMeanRgb: [number, number, number];
+}): SemMultiPageTiffResult {
+  const semMeta = buildSemStudioSmartMetadata({
+    nmPerPx: params.nmPerPx,
+    cropBottomPx: params.cropBottomPx,
+    scalebarNm: params.scalebarNm,
+    roiMeanRgb: params.roiMeanRgb,
+  });
+
+  const nPx = params.rawGrayscale.length;
+  let minVal = 255;
+  let maxVal = 0;
+  for (let i = 0; i < nPx; i++) {
+    const v = params.rawGrayscale[i];
+    if (v < minVal) minVal = v;
+    if (v > maxVal) maxVal = v;
+  }
+  const span = Math.max(1, maxVal - minVal);
+  const invert = semMeta.payload.contrastMode === 'dark_bar_light_bg';
+  const enhancedFrame = new Uint8Array(nPx);
+  for (let i = 0; i < nPx; i++) {
+    const norm = Math.round(((params.rawGrayscale[i] - minVal) / span) * 255);
+    enhancedFrame[i] = invert ? 255 - norm : norm;
+  }
+
+  const { tiffBytes, ifdOffsets } = encodeMultiPageGrayscaleTiff(
+    params.width,
+    params.height,
+    [params.rawGrayscale, enhancedFrame],
+    semMeta.tiffTag270
+  );
+
+  let tiffBase64 = '';
+  if (typeof Buffer !== 'undefined') {
+    tiffBase64 = Buffer.from(tiffBytes).toString('base64');
+  } else {
+    let bin = '';
+    for (let i = 0; i < tiffBytes.length; i++) bin += String.fromCharCode(tiffBytes[i]);
+    tiffBase64 = btoa(bin);
+  }
+
+  return {
+    semMeta,
+    tiffBytes,
+    tiffBase64,
+    tiffByteLength: tiffBytes.byteLength,
+    frameCount: 2,
+    ifdOffsets,
+  };
+}
+
 export interface SaedFftResult {
   dSpacingNm: number;
   reciprocalRadiusNmInv: number;

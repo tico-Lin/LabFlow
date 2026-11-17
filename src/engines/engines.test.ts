@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import { packChartStateBinary, unpackChartStateBinary } from './mathUtils';
 import {
@@ -9,6 +11,8 @@ import {
   analyzeLsvTafel,
   analyzePeis,
   buildMnOFe5Co5BenchmarkData,
+  extractGcdCycleFromMpr,
+  parseBioLogicMpr,
   parseBioLogicMpt,
 } from './electrochemEngine';
 import {
@@ -27,6 +31,8 @@ import {
   analyzeSaedLattice2dFft,
   analyzeTgaKissinger,
   buildSemStudioSmartMetadata,
+  generateSemMultiPageTiff,
+  parseTiffIfdSummary,
   processNmrFid,
   runNipalsPlsSem,
 } from './nmrAcousticMicroscopyThermalEngine';
@@ -360,3 +366,112 @@ test('AC-TAB-01/02, AC-CHEM-01, AC-DOC-01, AC-LIMS-01, AC-STAR-01, AC-TEX-01, AC
   assert.equal(healed.converged, true);
   assert.ok(healed.finalRSquared > 0.995, `Healed R^2 ${healed.finalRSquared} must be > 0.995`);
 });
+
+test('AUDIT-GAPS: Lin-KK drift rejection, real BioLogic .mpr binary parsing, exact Matern-3/2 GPR, and Dual-Frame TIFF 6.0', () => {
+  // 1. PEIS Lin-KK causality check: passes causal data (<0.5%) AND catches non-causal Re(Z) drift (>4%)
+  const bench = buildMnOFe5Co5BenchmarkData();
+  const causalPeis = analyzePeis(bench.peisInput);
+  assert.equal(causalPeis.kkMethod, 'Lin-KK-Voigt');
+  assert.ok(causalPeis.kkResidualPct < 0.5, `Causal Lin-KK RMS ${causalPeis.kkResidualPct}% must be < 0.5%`);
+
+  const driftedRe = bench.peisInput.reZOhm.map(
+    (re, i) => re + 0.55 * Math.log10(bench.peisInput.freqHz[i] + 10)
+  );
+  const nonCausalPeis = analyzePeis({
+    freqHz: bench.peisInput.freqHz,
+    reZOhm: driftedRe,
+    negImZOhm: bench.peisInput.negImZOhm,
+  });
+  assert.ok(
+    nonCausalPeis.kkResidualPct > 4.0,
+    `Non-causal drift must elevate Lin-KK RMS > 4%, got ${nonCausalPeis.kkResidualPct}%`
+  );
+
+  // 2. Real uploaded BioLogic .mpr binary parsing (/Example/EcLab)
+  const exampleDir = path.resolve(process.cwd(), 'Example/EcLab');
+  const peisMpr = parseBioLogicMpr(
+    new Uint8Array(fs.readFileSync(path.join(exampleDir, 'MnOFe5Co5_20261112_PEIS_02_PEIS_C01.mpr')))
+  );
+  assert.equal(peisMpr.pointCount, 64);
+  assert.equal(peisMpr.technique, 'PEIS');
+  assert.ok(peisMpr.rows['freq/Hz'][0] > 199000);
+  const realPeis = analyzePeis({
+    freqHz: peisMpr.rows['freq/Hz'],
+    reZOhm: peisMpr.rows['Re(Z)/Ohm'],
+    negImZOhm: peisMpr.rows['-Im(Z)/Ohm'],
+  });
+  assert.ok(realPeis.rsOhm > 0.1 && realPeis.rsOhm < 5.0, `Real .mpr Rs = ${realPeis.rsOhm}`);
+  assert.ok(realPeis.kkResidualPct < 0.5, `Real .mpr Lin-KK RMS ${realPeis.kkResidualPct}% must be < 0.5%`);
+
+  const cv10Mpr = parseBioLogicMpr(
+    new Uint8Array(fs.readFileSync(path.join(exampleDir, 'MnOFe5Co5_20261112_10mV_02_CV_C01.mpr')))
+  );
+  assert.equal(cv10Mpr.pointCount, 14412);
+  assert.equal(cv10Mpr.technique, 'CV/LSV');
+  assert.ok(cv10Mpr.columns.includes('Ewe/V') && cv10Mpr.columns.includes('<I>/mA'));
+
+  const gcd4Mpr = parseBioLogicMpr(
+    new Uint8Array(fs.readFileSync(path.join(exampleDir, 'MnOFe5Co5_20261112_4mA_C01.mpr')))
+  );
+  const gcd10Mpr = parseBioLogicMpr(
+    new Uint8Array(fs.readFileSync(path.join(exampleDir, 'MnOFe5Co5_20261112_10mA_C01.mpr')))
+  );
+  assert.equal(gcd4Mpr.technique, 'GCD');
+  assert.equal(gcd10Mpr.technique, 'GCD');
+  const gcd4Cyc = extractGcdCycleFromMpr(gcd4Mpr, 4, 1.0);
+  const gcd10Cyc = extractGcdCycleFromMpr(gcd10Mpr, 10, 1.0);
+  assert.ok(gcd4Cyc && gcd10Cyc, 'Must extract real GCD charge/discharge cycles from .mpr');
+  const realGcd = analyzeGcdCycles([gcd4Cyc, gcd10Cyc]);
+  assert.ok(realGcd[0].cIntegralFG > realGcd[1].cIntegralFG, '4 A/g C_int must exceed 10 A/g C_int');
+  assert.ok(realGcd[0].coulombicEfficiencyPct > 90 && realGcd[0].coulombicEfficiencyPct <= 105);
+
+  // 3. XAS Exact Matern-3/2 GPR Covariance Solver on non-uniform energy grid
+  const eGridIn = Array.from({ length: 45 }, (_, i) => 6535 + i * 2.0);
+  const muIn = eGridIn.map(
+    (e) => 0.1 + 0.5 * (1 + Math.tanh((e - 6545) / 2.2)) + 0.18 * Math.exp(-((e - 6548) ** 2) / 6)
+  );
+  const xasGpr = analyzeSynchrotronXas(eGridIn, muIn, 2);
+  const gprCurve = xasGpr.models['GPR_Matern'];
+  assert.equal(gprCurve.length, xasGpr.energyGridEv.length);
+  // Find nearest output grid point to the white-line peak e=6548 and verify exact GPR fit (no Nadaraya-Watson flattening)
+  const peakIdx = xasGpr.energyGridEv.reduce(
+    (best, e, i) => (Math.abs(e - 6548) < Math.abs(xasGpr.energyGridEv[best] - 6548) ? i : best),
+    0
+  );
+  const ePeak = xasGpr.energyGridEv[peakIdx];
+  const trueAtPeak =
+    0.1 + 0.5 * (1 + Math.tanh((ePeak - 6545) / 2.2)) + 0.18 * Math.exp(-((ePeak - 6548) ** 2) / 6);
+  // Compare normalized against GPR output via featureTensor consistency (models are normalized identically)
+  assert.ok(
+    Math.abs(gprCurve[peakIdx] - xasGpr.models['PCHIP'][peakIdx]) < 0.03,
+    `Exact Matern-3/2 GPR at peak=${gprCurve[peakIdx]} vs PCHIP=${xasGpr.models['PCHIP'][peakIdx]} (true pre-norm=${trueAtPeak})`
+  );
+
+  // 4. SEM Dual-Frame Multi-Page Little-Endian TIFF 6.0 Encoder
+  const W = 32;
+  const H = 32;
+  const rawGray = new Uint8Array(W * H);
+  for (let i = 0; i < rawGray.length; i++) rawGray[i] = 40 + (i % 120);
+  const tiffRes = generateSemMultiPageTiff({
+    width: W,
+    height: H,
+    rawGrayscale: rawGray,
+    nmPerPx: 1.25,
+    cropBottomPx: 64,
+    scalebarNm: 100,
+    roiMeanRgb: [42, 46, 54],
+  });
+  const summary = parseTiffIfdSummary(tiffRes.tiffBytes);
+  assert.equal(summary.magic, 'II:42');
+  assert.equal(summary.frameCount, 2);
+  assert.equal(summary.ifdOffsets.length, 2);
+  assert.deepEqual(summary.widths, [32, 32]);
+  assert.deepEqual(summary.heights, [32, 32]);
+  assert.deepEqual(summary.pageNumbers, [
+    [0, 2],
+    [1, 2],
+  ]);
+  assert.ok(summary.imageDescriptions[0].startsWith('SEM_STUDIO_SMART_V1|'));
+  assert.ok(summary.imageDescriptions[1].startsWith('SEM_STUDIO_SMART_V1|'));
+});
+

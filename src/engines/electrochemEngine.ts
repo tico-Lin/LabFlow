@@ -7,12 +7,14 @@
  * and iR-compensated LSV Tafel analysis.
  */
 
-import { linearInterp, linearRegression, trapz } from './mathUtils';
+import { linearInterp, linearRegression, solveLinearSystem, trapz } from './mathUtils';
 
 export interface ParsedEclabTable {
   headerLineCount: number;
   columns: string[];
   rows: Record<string, number[]>;
+  pointCount?: number;
+  technique?: string;
 }
 
 export function parseBioLogicMpt(rawText: string): ParsedEclabTable {
@@ -62,6 +64,216 @@ export function parseBioLogicMpt(rawText: string): ParsedEclabTable {
   }
 
   return { headerLineCount: colHeaderIdx + 1, columns, rows };
+}
+
+interface MprColumnSpec {
+  name: string;
+  byteSize: number;
+  kind: 'f32' | 'f64' | 'u16' | 'u32' | 'i32' | 'u8' | 'flag';
+}
+
+const BIOLOGIC_MPR_COL_MAP: Record<number, MprColumnSpec> = {
+  1: { name: 'mode', byteSize: 0, kind: 'flag' },
+  2: { name: 'ox/red', byteSize: 0, kind: 'flag' },
+  3: { name: 'error', byteSize: 0, kind: 'flag' },
+  4: { name: 'time/s', byteSize: 8, kind: 'f64' },
+  5: { name: 'control/V/mA', byteSize: 4, kind: 'f32' },
+  6: { name: 'Ewe/V', byteSize: 4, kind: 'f32' },
+  7: { name: 'dq/mA.h', byteSize: 8, kind: 'f64' },
+  8: { name: 'I/mA', byteSize: 4, kind: 'f32' },
+  9: { name: 'Ece/V', byteSize: 4, kind: 'f32' },
+  11: { name: '<I>/mA', byteSize: 8, kind: 'f64' },
+  13: { name: '(Q-Qo)/mA.h', byteSize: 8, kind: 'f64' },
+  19: { name: 'control/V', byteSize: 4, kind: 'f32' },
+  20: { name: 'control/mA', byteSize: 4, kind: 'f32' },
+  21: { name: 'control changes', byteSize: 0, kind: 'flag' },
+  23: { name: 'dQ/mA.h', byteSize: 8, kind: 'f64' },
+  24: { name: 'cycle number', byteSize: 8, kind: 'f64' },
+  26: { name: 'Rapp/Ohm', byteSize: 4, kind: 'f32' },
+  31: { name: 'counter inc.', byteSize: 0, kind: 'flag' },
+  32: { name: 'freq/Hz', byteSize: 4, kind: 'f32' },
+  33: { name: '|Ewe|/V', byteSize: 4, kind: 'f32' },
+  34: { name: '|I|/A', byteSize: 4, kind: 'f32' },
+  35: { name: 'Phase(Z)/deg', byteSize: 4, kind: 'f32' },
+  36: { name: '|Z|/Ohm', byteSize: 4, kind: 'f32' },
+  37: { name: 'Re(Z)/Ohm', byteSize: 4, kind: 'f32' },
+  38: { name: '-Im(Z)/Ohm', byteSize: 4, kind: 'f32' },
+  39: { name: 'I Range', byteSize: 2, kind: 'u16' },
+  65: { name: 'Ns changes', byteSize: 0, kind: 'flag' },
+  70: { name: 'P/W', byteSize: 4, kind: 'f32' },
+  74: { name: 'Energy/W.h', byteSize: 8, kind: 'f64' },
+  76: { name: '<I>/mA', byteSize: 4, kind: 'f32' },
+  77: { name: '<Ewe>/V', byteSize: 4, kind: 'f32' },
+  78: { name: 'Cs-2/uF-2', byteSize: 4, kind: 'f32' },
+  96: { name: '|Ece|/V', byteSize: 4, kind: 'f32' },
+  98: { name: 'Phase(Zce)/deg', byteSize: 4, kind: 'f32' },
+  99: { name: '|Zce|/Ohm', byteSize: 4, kind: 'f32' },
+  100: { name: 'Re(Zce)/Ohm', byteSize: 4, kind: 'f32' },
+  101: { name: '-Im(Zce)/Ohm', byteSize: 4, kind: 'f32' },
+  123: { name: 'Energy charge/W.h', byteSize: 8, kind: 'f64' },
+  124: { name: 'Energy discharge/W.h', byteSize: 8, kind: 'f64' },
+  125: { name: 'Capacitance charge/uF', byteSize: 8, kind: 'f64' },
+  126: { name: 'Capacitance discharge/uF', byteSize: 8, kind: 'f64' },
+  131: { name: 'Ns', byteSize: 2, kind: 'u16' },
+  163: { name: '|Estack|/V', byteSize: 4, kind: 'f32' },
+  168: { name: 'Rcmp/Ohm', byteSize: 4, kind: 'f32' },
+  169: { name: 'Cs/uF', byteSize: 4, kind: 'f32' },
+  172: { name: 'Cp/uF', byteSize: 4, kind: 'f32' },
+  174: { name: 'Ewe/V', byteSize: 4, kind: 'f32' },
+  178: { name: '(Q-Qo)/C', byteSize: 4, kind: 'f32' },
+  434: { name: '(Q-Qo)/C', byteSize: 4, kind: 'f32' },
+};
+
+/** Parses BioLogic EC-Lab binary .mpr files (`BIO-LOGIC MODULAR FILE` / `MODULEVMP data`). */
+export function parseBioLogicMpr(bytes: Uint8Array): ParsedEclabTable {
+  const sig = 'MODULEVMP data';
+  let dataModuleIdx = -1;
+  for (let i = 0; i <= bytes.length - sig.length; i++) {
+    let match = true;
+    for (let j = 0; j < sig.length; j++) {
+      if (bytes[i + j] !== sig.charCodeAt(j)) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      dataModuleIdx = i;
+      break;
+    }
+  }
+  if (dataModuleIdx < 0) {
+    throw new Error('Invalid BioLogic .mpr file: MODULEVMP data section not found.');
+  }
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const modLen = view.getUint32(dataModuleIdx + 0x2d, true);
+  const nPts = view.getUint32(dataModuleIdx + 0x41, true);
+  const nCols = view.getUint16(dataModuleIdx + 0x45, true);
+  const colIds: number[] = [];
+  for (let c = 0; c < nCols; c++) {
+    colIds.push(view.getUint16(dataModuleIdx + 0x47 + c * 2, true));
+  }
+
+  const hasFlags = colIds.some((id) => BIOLOGIC_MPR_COL_MAP[id]?.kind === 'flag');
+  const dataStart = dataModuleIdx + 0x41 + 1007;
+  const dataEnd = Math.min(bytes.byteLength, dataModuleIdx + 0x41 + modLen);
+  const actualRowBytes = nPts > 0 ? Math.floor((dataEnd - dataStart) / nPts) : 0;
+
+  let computedSize = hasFlags ? 1 : 0;
+  const activeSpecs: { name: string; kind: MprColumnSpec['kind']; byteSize: number }[] = [];
+  for (const id of colIds) {
+    const spec = BIOLOGIC_MPR_COL_MAP[id];
+    if (!spec) {
+      activeSpecs.push({ name: `col_${id}`, kind: 'f32', byteSize: 4 });
+      computedSize += 4;
+      continue;
+    }
+    if (spec.kind === 'flag') continue;
+    activeSpecs.push({ name: spec.name, kind: spec.kind, byteSize: spec.byteSize });
+    computedSize += spec.byteSize;
+  }
+
+  const rowStride = actualRowBytes > 0 ? actualRowBytes : computedSize;
+  const rows: Record<string, number[]> = {};
+  const columns = activeSpecs.map((s) => s.name);
+  for (const col of columns) rows[col] = [];
+  if (hasFlags) rows['flags'] = [];
+
+  for (let r = 0; r < nPts; r++) {
+    const base = dataStart + r * rowStride;
+    if (base + rowStride > bytes.byteLength) break;
+    let cursor = base;
+    if (hasFlags) {
+      rows['flags'].push(view.getUint8(cursor));
+      cursor += 1;
+    }
+    for (const spec of activeSpecs) {
+      if (cursor + spec.byteSize > base + rowStride) {
+        rows[spec.name].push(0);
+        continue;
+      }
+      let val = 0;
+      if (spec.kind === 'f32') val = view.getFloat32(cursor, true);
+      else if (spec.kind === 'f64') val = view.getFloat64(cursor, true);
+      else if (spec.kind === 'u16') val = view.getUint16(cursor, true);
+      else if (spec.kind === 'u32') val = view.getUint32(cursor, true);
+      else if (spec.kind === 'i32') val = view.getInt32(cursor, true);
+      else if (spec.kind === 'u8') val = view.getUint8(cursor);
+      rows[spec.name].push(Number.isFinite(val) ? val : 0);
+      cursor += spec.byteSize;
+    }
+  }
+
+  const technique = columns.includes('freq/Hz')
+    ? 'PEIS'
+    : columns.includes('Ewe/V') && columns.includes('<I>/mA')
+    ? 'CV/LSV'
+    : columns.includes('Ewe/V') &&
+      (columns.includes('control/V/mA') || columns.includes('(Q-Qo)/mA.h') || columns.includes('dq/mA.h'))
+    ? 'GCD'
+    : 'OCV';
+
+  return {
+    headerLineCount: dataStart,
+    columns: hasFlags ? ['flags', ...columns] : columns,
+    rows,
+    pointCount: nPts,
+    technique,
+  };
+}
+
+/**
+ * Extracts the last complete Charge (Ns=1) + Discharge (Ns=2) cycle from a BioLogic GCPL/GCD table.
+ */
+export function extractGcdCycleFromMpr(
+  parsed: ParsedEclabTable,
+  currentDensityAG: number,
+  massMg = 1.0
+): GcdCycleInput | null {
+  const t = parsed.rows['time/s'] ?? [];
+  const v = parsed.rows['Ewe/V'] ?? parsed.rows['<Ewe>/V'] ?? [];
+  const ns = parsed.rows['Ns'] ?? [];
+  if (t.length < 10 || v.length !== t.length) return null;
+
+  if (ns.length === t.length) {
+    const segs: { ns: number; start: number; end: number }[] = [];
+    let curStart = 0;
+    for (let i = 1; i <= ns.length; i++) {
+      if (i === ns.length || ns[i] !== ns[i - 1]) {
+        segs.push({ ns: Math.round(ns[i - 1]), start: curStart, end: i - 1 });
+        curStart = i;
+      }
+    }
+    const chgSegs = segs.filter((s) => s.ns === 1 && s.end - s.start >= 4);
+    const disSegs = segs.filter((s) => s.ns === 2 && s.end - s.start >= 4);
+    if (chgSegs.length > 0 && disSegs.length > 0) {
+      const chg = chgSegs[chgSegs.length - 1];
+      const dis = disSegs[disSegs.length - 1];
+      return {
+        currentDensityAG,
+        massMg,
+        timeChargeS: t.slice(chg.start, chg.end + 1),
+        voltageChargeV: v.slice(chg.start, chg.end + 1),
+        timeDischargeS: t.slice(dis.start, dis.end + 1),
+        voltageDischargeV: v.slice(dis.start, dis.end + 1),
+      };
+    }
+  }
+
+  // Fallback for ASCII .mpt GCD without Ns column: split around global V_max
+  let peakIdx = 0;
+  for (let i = 1; i < v.length; i++) {
+    if (v[i] > v[peakIdx]) peakIdx = i;
+  }
+  if (peakIdx < 3 || peakIdx > v.length - 4) return null;
+  return {
+    currentDensityAG,
+    massMg,
+    timeChargeS: t.slice(0, peakIdx + 1),
+    voltageChargeV: v.slice(0, peakIdx + 1),
+    timeDischargeS: t.slice(peakIdx),
+    voltageDischargeV: v.slice(peakIdx),
+  };
 }
 
 export interface CvScanCurve {
@@ -287,6 +499,10 @@ export interface PeisResult {
   tau0Sec: number;
   f0Hz: number;
   kkResidualPct: number;
+  kkMaxResidualPct: number;
+  kkMethod: 'Lin-KK-Voigt';
+  kkReFitOhm: number[];
+  kkNegImFitOhm: number[];
   rctEstimateOhm: number;
   freqHz: number[];
   reZOhm: number[];
@@ -341,21 +557,95 @@ export function analyzePeis(input: PeisInput): PeisResult {
   const f0Hz = pts[maxCIdx]?.f ?? 0.0159;
   const tau0Sec = 1 / (2 * Math.PI * Math.max(1e-9, f0Hz));
 
-  // Estimate Rct from mid-frequency semicircle minimum of negIm after peak
+  // Estimate Rct from mid-frequency semicircle
   const midSlice = pts.slice(Math.floor(pts.length * 0.15), Math.floor(pts.length * 0.65));
   const maxMidRe = midSlice.length > 0 ? Math.max(...midSlice.map((p) => p.re)) : rsOhm + 1;
   const rctEstimateOhm = Math.max(0.05, maxMidRe - rsOhm);
 
-  // Smooth Kramers-Kronig linear causality check via local 2nd-order Hilbert-consistent check
-  let residualSum = 0;
-  let normSum = 0;
-  for (let i = 1; i < n - 1; i++) {
-    const smoothRe = 0.25 * pts[i - 1].re + 0.5 * pts[i].re + 0.25 * pts[i + 1].re;
-    const smoothIm = 0.25 * pts[i - 1].negIm + 0.5 * pts[i].negIm + 0.25 * pts[i + 1].negIm;
-    residualSum += Math.hypot(pts[i].re - smoothRe, pts[i].negIm - smoothIm);
-    normSum += Math.hypot(pts[i].re, pts[i].negIm);
+  // Genuine Boukamp (1995) Linear Kramers-Kronig (Lin-KK) Voigt RC + L_stray + C_series regression:
+  // Z_KK(w) = R_s + j*w*L + 1/(j*w*C) + sum_{k=1..M} R_k / (1 + j*w*tau_k)
+  // Re(Z_KK)    = R_s + sum R_k / (1 + (w*tau_k)^2)
+  // -Im(Z_KK)   = -w*L + 1/(w*C) + sum R_k * (w*tau_k) / (1 + (w*tau_k)^2)
+  // Both Re and -Im share the EXACT same parameter vector [R_s, L, 1/C, R_1..R_M],
+  // enforcing strict Kramers-Kronig causality across the full spectrum.
+  const fMax = Math.max(...pts.map((p) => p.f), 1);
+  const fMin = Math.max(1e-6, Math.min(...pts.map((p) => p.f)));
+  const tauMin = 1 / (2 * Math.PI * fMax * 3.16);
+  const tauMax = 1 / (2 * Math.PI * fMin * 0.316);
+  const nVoigt = Math.min(24, Math.max(8, Math.floor(n * 0.45)));
+  const taus = Array.from({ length: nVoigt }, (_, k) => {
+    const frac = nVoigt > 1 ? k / (nVoigt - 1) : 0.5;
+    return tauMin * Math.pow(tauMax / tauMin, frac);
+  });
+
+  const pDim = 3 + nVoigt; // [R_s, L_scaled, invC_scaled, R_1..R_M]
+  const wScaleL = 1 / (2 * Math.PI * fMax);
+  const wScaleC = 2 * Math.PI * fMin;
+  const ATA = Array.from({ length: pDim }, () => new Array(pDim).fill(0));
+  const ATb = new Array(pDim).fill(0);
+
+  for (let i = 0; i < n; i++) {
+    const w = 2 * Math.PI * pts[i].f;
+    const zMagSq = Math.max(1e-8, pts[i].re * pts[i].re + pts[i].negIm * pts[i].negIm);
+    const invWt = 1 / zMagSq; // Boukamp modulus weighting 1/|Z|^2
+
+    // Row for Re(Z)
+    const rowRe = new Array(pDim).fill(0);
+    rowRe[0] = 1;
+    rowRe[1] = 0;
+    rowRe[2] = 0;
+    // Row for -Im(Z)
+    const rowIm = new Array(pDim).fill(0);
+    rowIm[0] = 0;
+    rowIm[1] = -w * wScaleL;
+    rowIm[2] = wScaleC / w;
+
+    for (let k = 0; k < nVoigt; k++) {
+      const wt = w * taus[k];
+      const denom = 1 + wt * wt;
+      rowRe[3 + k] = 1 / denom;
+      rowIm[3 + k] = wt / denom;
+    }
+
+    for (let r = 0; r < pDim; r++) {
+      ATb[r] += invWt * (rowRe[r] * pts[i].re + rowIm[r] * pts[i].negIm);
+      for (let c = 0; c < pDim; c++) {
+        ATA[r][c] += invWt * (rowRe[r] * rowRe[c] + rowIm[r] * rowIm[c]);
+      }
+    }
   }
-  const kkResidualPct = normSum > 1e-12 ? (residualSum / normSum) * 100 : 0;
+
+  // Tiny Tikhonov stabilization to keep Voigt matrix strictly well-conditioned
+  for (let r = 0; r < pDim; r++) ATA[r][r] += 1e-9;
+  const theta = solveLinearSystem(ATA, ATb);
+
+  const kkReFitOhm: number[] = new Array(n);
+  const kkNegImFitOhm: number[] = new Array(n);
+  let kkSqSum = 0;
+  let kkMaxResidualPct = 0;
+
+  for (let i = 0; i < n; i++) {
+    const w = 2 * Math.PI * pts[i].f;
+    let fitRe = theta[0];
+    let fitNegIm = -w * wScaleL * theta[1] + (wScaleC / w) * theta[2];
+    for (let k = 0; k < nVoigt; k++) {
+      const wt = w * taus[k];
+      const denom = 1 + wt * wt;
+      fitRe += theta[3 + k] / denom;
+      fitNegIm += (theta[3 + k] * wt) / denom;
+    }
+    kkReFitOhm[i] = fitRe;
+    kkNegImFitOhm[i] = fitNegIm;
+
+    const zMag = Math.max(1e-6, Math.hypot(pts[i].re, pts[i].negIm));
+    const dRe = (pts[i].re - fitRe) / zMag;
+    const dIm = (pts[i].negIm - fitNegIm) / zMag;
+    kkSqSum += dRe * dRe + dIm * dIm;
+    const ptMax = Math.max(Math.abs(dRe), Math.abs(dIm)) * 100;
+    if (ptMax > kkMaxResidualPct) kkMaxResidualPct = ptMax;
+  }
+
+  const kkResidualPct = n > 0 ? Math.sqrt(kkSqSum / (2 * n)) * 100 : 0;
 
   return {
     rsOhm: Number(rsOhm.toFixed(4)),
@@ -363,7 +653,11 @@ export function analyzePeis(input: PeisInput): PeisResult {
     warburgSigma: Number(Math.max(0, warburgReg.slope).toFixed(3)),
     tau0Sec: Number(tau0Sec.toFixed(2)),
     f0Hz: Number(f0Hz.toFixed(5)),
-    kkResidualPct: Number(kkResidualPct.toFixed(3)),
+    kkResidualPct: Number(kkResidualPct.toFixed(4)),
+    kkMaxResidualPct: Number(kkMaxResidualPct.toFixed(4)),
+    kkMethod: 'Lin-KK-Voigt',
+    kkReFitOhm,
+    kkNegImFitOhm,
     rctEstimateOhm: Number(rctEstimateOhm.toFixed(3)),
     freqHz: pts.map((p) => p.f),
     reZOhm: pts.map((p) => p.re),

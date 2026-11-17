@@ -18,6 +18,7 @@ import {
   nextPow2,
   pchipInterp,
   savgolSmooth,
+  solveLinearSystem,
 } from './mathUtils';
 
 // ============================================================================
@@ -224,19 +225,44 @@ export function analyzeSynchrotronXas(
   const mSavgol = savgolSmooth(mLinear, 7, 2);
   const mSmoothSpline = savgolSmooth(mCubic, 9, 3);
 
-  // GPR (Matern-3/2 kernel regression on energy grid)
-  const lenScale = Math.max(1.5, (eMax - eMin) / 45);
-  const mGpr = energyGrid.map((eq) => {
-    let wSum = 0;
-    let ySum = 0;
-    for (let j = 0; j < eSrc.length; j++) {
-      const r = Math.abs(eq - eSrc[j]) / lenScale;
-      if (r > 6) continue;
-      const k = (1 + Math.sqrt(3) * r) * Math.exp(-Math.sqrt(3) * r);
-      wSum += k;
-      ySum += k * muSrc[j];
+  // GPR (True Matern-3/2 Gaussian Process Regression solving (K + sigma_n^2 I) * alpha = y)
+  const lenScale = Math.max(1.5, (eMax - eMin) / 30);
+  const gprIdx =
+    eSrc.length <= 220
+      ? eSrc.map((_, i) => i)
+      : Array.from({ length: 220 }, (_, i) =>
+          Math.min(eSrc.length - 1, Math.round((i / 219) * (eSrc.length - 1)))
+        );
+  const nGpr = gprIdx.length;
+  const gprX = gprIdx.map((idx) => eSrc[idx]);
+  const gprY = gprIdx.map((idx) => muSrc[idx]);
+  const yMean = gprY.reduce((a, b) => a + b, 0) / Math.max(1, nGpr);
+  const yCentered = gprY.map((v) => v - yMean);
+  const yVar = Math.max(
+    1e-4,
+    yCentered.reduce((acc, v) => acc + v * v, 0) / Math.max(1, nGpr)
+  );
+  const sigmaN2 = 1e-4 * yVar;
+
+  const kMat = Array.from({ length: nGpr }, (_, i) => {
+    const row = new Array(nGpr);
+    for (let j = 0; j < nGpr; j++) {
+      const r = Math.abs(gprX[i] - gprX[j]) / lenScale;
+      row[j] = yVar * (1 + Math.sqrt(3) * r) * Math.exp(-Math.sqrt(3) * r);
     }
-    return wSum > 1e-12 ? ySum / wSum : mPchip[0];
+    row[i] += sigmaN2;
+    return row;
+  });
+  const alphaGpr = solveLinearSystem(kMat, yCentered);
+
+  const mGpr = energyGrid.map((eq) => {
+    let pred = yMean;
+    for (let j = 0; j < nGpr; j++) {
+      const r = Math.abs(eq - gprX[j]) / lenScale;
+      const k = yVar * (1 + Math.sqrt(3) * r) * Math.exp(-Math.sqrt(3) * r);
+      pred += k * alphaGpr[j];
+    }
+    return pred;
   });
 
   // Bandlimited Sinc kernel interpolation
